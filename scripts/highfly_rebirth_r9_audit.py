@@ -90,6 +90,10 @@ window.__hfRebirthMediaMap = """ + json.dumps(lookup,ensure_ascii=True,separator
           ? p.slice('/HIGHFLY-REBIRTH/'.length) : p.replace(/^\\/+/, '');
         var route=window.__hfRebirthMediaMap && window.__hfRebirthMediaMap[logical];
         if(route){request.pathname='/HIGHFLY-REBIRTH'+route;return request.href;}
+        // Hashed file callers sometimes use /media/ directly.
+        if(p.indexOf('/media/')===0){
+          request.pathname='/HIGHFLY-REBIRTH'+p;return request.href;
+        }
       }
     }catch(e){}
     if(path.test(v))return '/HIGHFLY-REBIRTH'+v;"""
