@@ -234,7 +234,7 @@ jobs:
           index=(root/'index.html').read_text()
           assert '/HIGHFLY-REBIRTH/assets/' in index,'INCORRECT_GITHUB_PAGES_ASSET_BASE'
           (root/'rebirth-version.json').write_text(json.dumps({
-            'version':'REBIRTH-R9','base':'ClaudeCraft-v0.44.7',
+            'version':'REBIRTH-R11-entry-recovered','base':'ClaudeCraft-v0.44.7',
             'classes':9,'training':True,'offline_save':'rebirth-only',
             'HP_MP_EN':'level-one','S23_real_qa':'PENDING',
             'root_main_cobalt':'NOT_MODIFIED'
@@ -294,7 +294,7 @@ jobs:
       - name: R9 install isolated Chromium browser smoke
         working-directory: candidate
         run: pnpm exec playwright install chromium
-      - name: R9 S23 native canvas mount, GLB loads, creator touch and world entry gate
+      - name: R11 certified S23-sized native offline entry, GLB, world and save gate
         working-directory: candidate
         timeout-minutes: 12
         run: |
