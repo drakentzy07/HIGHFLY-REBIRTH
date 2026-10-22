@@ -50,6 +50,28 @@ def source_patch():
     s = s.replace(old_base, """  return base && raw.startsWith('/')""")
     p.write_text(s)
 
+    # R9 preview ROOT fix: CharacterPreview's constructor ACCEPTS the target
+    # container, but only setContainer() actually appends its existing canvas.
+    # R7 enters offline BEFORE character assets finish loading, so the one
+    # native canvas remains attached to the HIDDEN online preview forever.
+    # Fix the actual native module rather than injecting a duplicate renderer.
+    main = candidate / "src/main.ts"
+    code = main.read_text()
+    old_preview = """          constrainedMemory: GFX.constrainedMemory,
+        });
+        // If a token auto-login"""
+    new_preview = """          constrainedMemory: GFX.constrainedMemory,
+        });
+        // HIGHFLY REBIRTH R9: the shared canvas is initially inside the online
+        // roster. If assets settle while offline creation is already open,
+        // mount it into the ACTUAL visible creator immediately.
+        characterPreview.setContainer(container);
+        // If a token auto-login"""
+    if code.count(old_preview) != 1:
+        raise AssertionError("R9_NATIVE_CHARACTER_PREVIEW_ANCHOR_CHANGED")
+    code = code.replace(old_preview,new_preview)
+    main.write_text(code)
+
     # R7 must NOT rewrite raw logical paths to absolute Pages URLs during
     # bundling: a manifest maps logical keys, never Pages-specific strings.
     offenders = []
