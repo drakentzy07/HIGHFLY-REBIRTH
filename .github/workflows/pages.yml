@@ -287,7 +287,7 @@ jobs:
         run: |
           node scripts/build_media_manifest.mjs prune
           test -s dist/media/models/creatures/bull.a00c2c292526.glb
-      - name: R9 audit every emitted asset and browser-managed absolute path
+      - name: R9 repair CSS HTML direct media routes and exhaustively audit all assets
         run: |
           set -euo pipefail
           python3 release/scripts/highfly_rebirth_r9_audit.py dist candidate
