@@ -5,11 +5,13 @@
  * A green static build alone is insufficient.
  */
 import { createServer } from 'node:http';
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, join, extname, sep } from 'node:path';
 import { chromium } from 'playwright';
 
 const ROOT=resolve(process.cwd(),'dist');
+const DIAG=resolve(process.cwd(),'.run-diagnostics');
+mkdirSync(DIAG,{recursive:true});
 const PREFIX='/HIGHFLY-REBIRTH';
 const mime={
  '.js':'text/javascript;charset=utf-8','.html':'text/html;charset=utf-8',
@@ -20,6 +22,7 @@ const mime={
  '.webp':'image/webp','.ogg':'audio/ogg','.mp3':'audio/mpeg',
 };
 const missing=[];
+const diagnostics={bootConsole:[],failedResources:[],stages:[]};
 const server=createServer((req,res)=>{
  const raw=new URL(req.url||'/', 'http://127.0.0.1:4187').pathname;
  const scoped=raw===PREFIX||raw.startsWith(PREFIX+'/');
@@ -63,19 +66,29 @@ try{
  page.on('pageerror',err=>{const msg='JS '+String(err).slice(0,400);failures.push(msg);consoleIssues.push(msg);});
  page.on('requestfailed',req=>requestFailures.push({url:req.url(),error:req.failure()?.errorText}));
  page.on('response',r=>{
-   if(/\.(glb|ktx2|wasm)(\?|$)/.test(new URL(r.url()).pathname)){
-     network.push({status:r.status(),path:new URL(r.url()).pathname});
+   const path=new URL(r.url()).pathname;
+   if(/\.(glb|ktx2|wasm)(\?|$)/.test(path)){
+     network.push({status:r.status(),path});
      if(r.status()>=400)failures.push('ASSET HTTP '+r.status()+' '+r.url());
+   }
+   if(r.status()>=400 && /\.(glb|ktx2|wasm|js|css|woff2?|jpg|png|webp|hdr)(\?|$)/i.test(path)){
+     failures.push('HTTP '+r.status()+' '+r.url());
    }
  });
  page.on('console',m=>{
    const str=m.text();
+   if(/\[entry-guard\]|\[load-profile\]|deferred preload|asset load failed|prewarm failed|character preview assets failed/i.test(str)){
+     diagnostics.bootConsole.push({type:m.type(),text:str.slice(0,700)});
+     if(diagnostics.bootConsole.length>150)diagnostics.bootConsole.shift();
+   }
    if(m.type()==='error'||(m.type()==='warning' && /webgl|ktx2|glb|character|preview|transcode|shader|wasm/i.test(str)))
      consoleIssues.push(m.type()+': '+str.slice(0,500));
    if(/asset load failed|missing file or bad GLB|Error: Failed to fetch/i.test(str))
      failures.push('BROWSER '+str.slice(0,300));
  });
- const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&lang=es';
+ // Low is the official source game's graphics-tier smoke for headless
+// SwiftShader; full quality on S23 is checked separately, not inferred.
+const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&lang=es&gfx=low';
  await page.goto(url,{waitUntil:'load',timeout:60000});
  await page.locator('#hf-r7-enter').click();
  await page.locator('#offline-select').waitFor({state:'visible',timeout:40000});
@@ -114,8 +127,10 @@ try{
      return {canvasParent:c?.parentElement?.id,canvasSize:c?{width:c.width,height:c.height}:null,
        canvas:box(c),offline:box(o),online:box(n),
        loadingStatus:document.getElementById('ls-status')?.textContent,
-       pageText:document.body.innerText.slice(-900)};
+       pageText:document.body.innerText.slice(-900),loadingProgress:document.getElementById('ls-fill')?.style.width,
+       loadProfile:!!window.__loadProfile};
    });
+   await page.screenshot({path:join(DIAG,'preview-failure.png'),fullPage:true,timeout:10000}).catch(()=>{});
    console.error('R9_PREVIEW_FORENSICS '+JSON.stringify({
      state,glbs:network.filter(x=>x.path.endsWith('.glb')).slice(-20),
      issueCount:consoleIssues.length,consoleIssues:consoleIssues.slice(-24),
@@ -128,19 +143,80 @@ try{
  const glbs=network.filter(x=>x.status===200&&x.path.includes('/media/models/')&&x.path.endsWith('.glb'));
  if(!glbs.length)throw Error('R9_PREVIEW_CANVAS_WITHOUT_LOADED_GLB');
  if(failures.length)throw Error('R9_PREVIEW_ASSET_FAILURE '+failures.slice(0,8).join(' | '));
- await page.locator('#char-name').fill('R9AuditHunter');
+ await page.locator('#char-name').fill('RebirthTester');
  await page.locator('#btn-start-offline').click();
+ // The native character validator accepts letters/spaces/apostrophes/hyphens
+ // ONLY. A rejected test name must fail immediately, never masquerade as a
+ // GLB/world-entry timeout or falsely accuse the real mobile build.
+ await page.waitForFunction(()=>{
+   const error=document.querySelector('#offline-error')?.textContent?.trim();
+   return document.body.classList.contains('game-active') || Boolean(error);
+ },null,{timeout:25000,polling:200});
+ const nameError=(await page.locator('#offline-error').textContent())?.trim();
+ if(nameError)throw Error('R9_NATIVE_CREATOR_REJECTED_NAME '+nameError);
+ console.log('R9_VALID_NAME_ACCEPTED_AND_WORLD_ENTRY_STARTED=PASS');
+ async function captureWorldForensics(reason){
+   const state=await page.evaluate(()=>{
+     const visible=(selector)=>{
+       const e=document.querySelector(selector);if(!e)return null;
+       const css=getComputedStyle(e);const r=e.getBoundingClientRect();
+       return {visible:css.visibility,display:css.display,width:r.width,height:r.height,
+         classes:e.className,text:e.textContent?.slice(0,220)};
+     };
+     const localStorageKeys=Object.keys(localStorage).filter(x=>/highfly|rebirth|save|character/i.test(x));
+     return {location:location.href,ready:document.readyState,
+       gameDefined:!!window.__game,hasSim:!!window.__game?.sim,
+       playerDefined:!!window.__game?.sim?.player,
+       gameScreen:visible('#game-container'),loadingScreen:visible('#loading-screen'),
+       loadingStatus:visible('#ls-status'),
+       authScreen:visible('#offline-select'),
+       assetError:visible('#asset-error'),fatalOverlay:visible('#disconnect-overlay'),
+       allCanvases:[...document.querySelectorAll('canvas')].map(x=>({
+         id:x.id,parent:x.parentElement?.id,width:x.width,height:x.height})),
+       storageKeys:localStorageKeys,bodyText:document.body.innerText.slice(-1100)};
+   });
+   const payload={reason,state,bootConsole:diagnostics.bootConsole.slice(-70),
+     networkTail:network.slice(-45),errors:failures.slice(-30),
+     consoleIssues:consoleIssues.slice(-35),requestFailures:requestFailures.slice(-24),
+     serverMissing:missing.slice(-30)};
+   console.error('R9_WORLD_FORENSICS '+JSON.stringify(payload));
+   writeFileSync(join(DIAG,'world-failure.json'),JSON.stringify(payload,null,2)+'\n');
+   await page.screenshot({path:join(DIAG,'world-failure.png'),fullPage:true,timeout:10000}).catch(()=>{});
+   return payload;
+ }
+ try {
  await page.waitForFunction(()=>{
    const l=document.querySelector('#loading-screen');
    return Boolean(window.__game?.sim?.player) &&
      (!l || !l.classList.contains('visible'));
- },null,{timeout:220000,polling:500});
+ },null,{timeout:180000,polling:500});
+ }catch(err) {
+   await captureWorldForensics(err?.message||'WORLD_TIMEOUT');
+   throw new Error('R9_WORLD_FAILED_SEE_FORENSICS: '+String(err?.message||err));
+ }
+ // R6 save is isolated by class + lowercased name. Trigger the actual
+ // pagehide listener and prove persistence without deleting any user data.
+ const saveReceipt=await page.evaluate(()=>{
+   window.dispatchEvent(new Event('pagehide'));
+   const key='highfly.rebirth044.offline.r6:warrior:rebirthtester';
+   const raw=localStorage.getItem(key);
+   let record=null;
+   try{record=raw?JSON.parse(raw):null}catch{}
+   return {key,stored:Boolean(raw),name:record?.name,cls:record?.cls,
+     origin:record?.origin,level:record?.character?.level,
+     savedAt:record?.savedAt,position:record?.character?.pos};
+ });
+ if(!saveReceipt.stored||saveReceipt.origin!=='highfly.rebirth044'||
+    saveReceipt.cls!=='warrior'||saveReceipt.name!=='rebirthtester'||
+    !(saveReceipt.level>=1))
+   throw Error('R9_NATIVE_SAVE_MISSING '+JSON.stringify(saveReceipt));
+ console.log('R9_NATIVE_OFFLINE_SAVE_WRITTEN '+JSON.stringify(saveReceipt));
  if(failures.length)throw Error('R9_WORLD_ASSET_ERRORS '+failures.slice(0,12).join(' | '));
  const missingAssets=missing.filter(p=>/\.(glb|ktx2|wasm|woff2?|png|webp)(\?|$)/.test(p));
  if(missingAssets.length)throw Error('R9_WORLD_404_ASSETS '+missingAssets.slice(0,12).join(','));
  const result={result:'PASS',classes:classCount,previewGLBRequests:glbs.length,
    total3DRequests:network.length,playableWorld:true,s23Physical:'PENDING',
-   runUrl:url,errors:failures.length};
+   runUrl:url,errors:failures.length,saveKey:saveReceipt.key,saveChecked:true};
  console.log('R9_BROWSER_REAL_PREVIEW_AND_WORLD_PASS '+JSON.stringify(result));
  await context.close();
 }finally{
