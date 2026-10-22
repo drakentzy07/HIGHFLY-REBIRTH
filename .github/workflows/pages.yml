@@ -250,7 +250,7 @@ jobs:
              'models/creatures/bull.glb',
              'models/creatures/crab_ability_anims.glb',
              'models/creatures/yeti.glb',
-             'models/creatures/skeleton_rogue.glb',
+             'models/chars/enemies/skeleton_rogue.glb',
              'models/creatures/treant_ability_anims.glb']
           checked={}
           for name in names:
