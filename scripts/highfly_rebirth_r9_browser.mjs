@@ -184,12 +184,29 @@ const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&lang=es&gfx=low';
    await captureWorldForensics(err?.message||'WORLD_TIMEOUT');
    throw new Error('R9_WORLD_FAILED_SEE_FORENSICS: '+String(err?.message||err));
  }
+ // R6 save is isolated by class + lowercased name. Trigger the actual
+ // pagehide listener and prove persistence without deleting any user data.
+ const saveReceipt=await page.evaluate(()=>{
+   window.dispatchEvent(new Event('pagehide'));
+   const key='highfly.rebirth044.offline.r6:warrior:r9audithunter';
+   const raw=localStorage.getItem(key);
+   let record=null;
+   try{record=raw?JSON.parse(raw):null}catch{}
+   return {key,stored:Boolean(raw),name:record?.name,cls:record?.cls,
+     origin:record?.origin,level:record?.character?.level,
+     savedAt:record?.savedAt,position:record?.character?.pos};
+ });
+ if(!saveReceipt.stored||saveReceipt.origin!=='highfly.rebirth044'||
+    saveReceipt.cls!=='warrior'||saveReceipt.name!=='r9audithunter'||
+    !(saveReceipt.level>=1))
+   throw Error('R9_NATIVE_SAVE_MISSING '+JSON.stringify(saveReceipt));
+ console.log('R9_NATIVE_OFFLINE_SAVE_WRITTEN '+JSON.stringify(saveReceipt));
  if(failures.length)throw Error('R9_WORLD_ASSET_ERRORS '+failures.slice(0,12).join(' | '));
  const missingAssets=missing.filter(p=>/\.(glb|ktx2|wasm|woff2?|png|webp)(\?|$)/.test(p));
  if(missingAssets.length)throw Error('R9_WORLD_404_ASSETS '+missingAssets.slice(0,12).join(','));
  const result={result:'PASS',classes:classCount,previewGLBRequests:glbs.length,
    total3DRequests:network.length,playableWorld:true,s23Physical:'PENDING',
-   runUrl:url,errors:failures.length};
+   runUrl:url,errors:failures.length,saveKey:saveReceipt.key,saveChecked:true};
  console.log('R9_BROWSER_REAL_PREVIEW_AND_WORLD_PASS '+JSON.stringify(result));
  await context.close();
 }finally{
