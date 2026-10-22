@@ -294,7 +294,7 @@ jobs:
       - name: R9 install isolated Chromium browser smoke
         working-directory: candidate
         run: pnpm exec playwright install chromium
-      - name: R9 S23 creator touch layout GLB preview and full world boot gate
+      - name: R9 S23 native canvas mount, GLB loads, creator touch and world entry gate
         working-directory: candidate
         timeout-minutes: 12
         run: |
