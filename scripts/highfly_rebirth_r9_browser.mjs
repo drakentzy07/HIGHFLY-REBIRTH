@@ -59,8 +59,9 @@ try{
  });
  const page=await context.newPage();
  page.setDefaultTimeout(40000);
- const failures=[],network=[];
- page.on('pageerror',err=>failures.push('JS '+String(err).slice(0,400)));
+ const failures=[],network=[],consoleIssues=[],requestFailures=[];
+ page.on('pageerror',err=>{const msg='JS '+String(err).slice(0,400);failures.push(msg);consoleIssues.push(msg);});
+ page.on('requestfailed',req=>requestFailures.push({url:req.url(),error:req.failure()?.errorText}));
  page.on('response',r=>{
    if(/\.(glb|ktx2|wasm)(\?|$)/.test(new URL(r.url()).pathname)){
      network.push({status:r.status(),path:new URL(r.url()).pathname});
@@ -69,6 +70,8 @@ try{
  });
  page.on('console',m=>{
    const str=m.text();
+   if(m.type()==='error'||(m.type()==='warning' && /webgl|ktx2|glb|character|preview|transcode|shader|wasm/i.test(str)))
+     consoleIssues.push(m.type()+': '+str.slice(0,500));
    if(/asset load failed|missing file or bad GLB|Error: Failed to fetch/i.test(str))
      failures.push('BROWSER '+str.slice(0,300));
  });
@@ -96,11 +99,30 @@ try{
  });
  console.log('R9_CREATOR_LAYOUT_GEOMETRY '+JSON.stringify(placement));
  await page.locator('#offline-select .mini-class[data-class="warrior"]').click();
+ try {
  await page.waitForFunction(()=>{
    const el=document.querySelector('#offline-preview-container canvas');
    return el && el.width>=80 && el.height>=80 &&
     el.getBoundingClientRect().width>=80 && el.getBoundingClientRect().height>=80;
- },null,{timeout:90000,polling:300});
+ },null,{timeout:75000,polling:300});
+ }catch(err){
+   const state=await page.evaluate(()=>{
+     const c=document.getElementById('char-preview-canvas');
+     const o=document.getElementById('offline-preview-container');
+     const n=document.getElementById('online-preview-container');
+     const box=e=>{if(!e)return null;const r=e.getBoundingClientRect();return {width:r.width,height:r.height,hidden:e.hidden,display:getComputedStyle(e).display,visibility:getComputedStyle(e).visibility}};
+     return {canvasParent:c?.parentElement?.id,canvasSize:c?{width:c.width,height:c.height}:null,
+       canvas:box(c),offline:box(o),online:box(n),
+       loadingStatus:document.getElementById('ls-status')?.textContent,
+       pageText:document.body.innerText.slice(-900)};
+   });
+   console.error('R9_PREVIEW_FORENSICS '+JSON.stringify({
+     state,glbs:network.filter(x=>x.path.endsWith('.glb')).slice(-20),
+     issueCount:consoleIssues.length,consoleIssues:consoleIssues.slice(-24),
+     failures:failures.slice(-12),requests:requestFailures.slice(-15),
+     serverMissing:missing.slice(-18)}));
+   throw err;
+ }
  // The real preview is not proven by a canvas alone. There must be a successful
  // versioned GLB fetch in addition to a painted WebGL canvas.
  const glbs=network.filter(x=>x.status===200&&x.path.includes('/media/models/')&&x.path.endsWith('.glb'));
