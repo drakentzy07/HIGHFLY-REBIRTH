@@ -143,8 +143,18 @@ const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&lang=es&gfx=low';
  const glbs=network.filter(x=>x.status===200&&x.path.includes('/media/models/')&&x.path.endsWith('.glb'));
  if(!glbs.length)throw Error('R9_PREVIEW_CANVAS_WITHOUT_LOADED_GLB');
  if(failures.length)throw Error('R9_PREVIEW_ASSET_FAILURE '+failures.slice(0,8).join(' | '));
- await page.locator('#char-name').fill('R9AuditHunter');
+ await page.locator('#char-name').fill('RebirthTester');
  await page.locator('#btn-start-offline').click();
+ // The native character validator accepts letters/spaces/apostrophes/hyphens
+ // ONLY. A rejected test name must fail immediately, never masquerade as a
+ // GLB/world-entry timeout or falsely accuse the real mobile build.
+ await page.waitForFunction(()=>{
+   const error=document.querySelector('#offline-error')?.textContent?.trim();
+   return document.body.classList.contains('game-active') || Boolean(error);
+ },null,{timeout:25000,polling:200});
+ const nameError=(await page.locator('#offline-error').textContent())?.trim();
+ if(nameError)throw Error('R9_NATIVE_CREATOR_REJECTED_NAME '+nameError);
+ console.log('R9_VALID_NAME_ACCEPTED_AND_WORLD_ENTRY_STARTED=PASS');
  async function captureWorldForensics(reason){
    const state=await page.evaluate(()=>{
      const visible=(selector)=>{
@@ -188,7 +198,7 @@ const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&lang=es&gfx=low';
  // pagehide listener and prove persistence without deleting any user data.
  const saveReceipt=await page.evaluate(()=>{
    window.dispatchEvent(new Event('pagehide'));
-   const key='highfly.rebirth044.offline.r6:warrior:r9audithunter';
+   const key='highfly.rebirth044.offline.r6:warrior:rebirthtester';
    const raw=localStorage.getItem(key);
    let record=null;
    try{record=raw?JSON.parse(raw):null}catch{}
@@ -197,7 +207,7 @@ const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&lang=es&gfx=low';
      savedAt:record?.savedAt,position:record?.character?.pos};
  });
  if(!saveReceipt.stored||saveReceipt.origin!=='highfly.rebirth044'||
-    saveReceipt.cls!=='warrior'||saveReceipt.name!=='r9audithunter'||
+    saveReceipt.cls!=='warrior'||saveReceipt.name!=='rebirthtester'||
     !(saveReceipt.level>=1))
    throw Error('R9_NATIVE_SAVE_MISSING '+JSON.stringify(saveReceipt));
  console.log('R9_NATIVE_OFFLINE_SAVE_WRITTEN '+JSON.stringify(saveReceipt));
