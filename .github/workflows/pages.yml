@@ -277,6 +277,11 @@ jobs:
           (dist/'rebirth-r8-qa.json').write_text(json.dumps(report,indent=2)+'\n')
           print('R8_REAL_HASHED_GLB_SMOKE_PASS',json.dumps(report))
           PY
+      - name: R8 remove duplicate originals after validated hashed copies (native safe prune)
+        working-directory: candidate
+        run: |
+          node scripts/build_media_manifest.mjs prune
+          test -s dist/media/models/creatures/bull.a00c2c292526.glb
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
