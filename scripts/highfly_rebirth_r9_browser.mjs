@@ -73,7 +73,7 @@ try{
      failures.push('BROWSER '+str.slice(0,300));
  });
  const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&lang=es';
- await page.goto(url,{waitUntil:'domcontentloaded',timeout:40000});
+ await page.goto(url,{waitUntil:'load',timeout:60000});
  await page.locator('#hf-r7-enter').click();
  await page.locator('#offline-select').waitFor({state:'visible',timeout:40000});
  const classCount=await page.locator('#offline-select .mini-class').count();
