@@ -78,6 +78,23 @@ try{
  await page.locator('#offline-select').waitFor({state:'visible',timeout:40000});
  const classCount=await page.locator('#offline-select .mini-class').count();
  if(classCount!==9)throw Error('R9_NATIVE_NINE_CLASSES_NOT_PRESENT='+classCount);
+ const placement=await page.evaluate(()=>{
+  const select=(q)=>{
+   const e=document.querySelector(q);
+   if(!e)return null;
+   const r=e.getBoundingClientRect();
+   const x=r.left+r.width/2,y=r.top+r.height/2;
+   const hit=document.elementFromPoint(x,y);
+   return {x:Math.round(x),y:Math.round(y),width:Math.round(r.width),
+     height:Math.round(r.height),hitTag:hit?.tagName,hitClass:hit?.className,
+     hitId:hit?.id,position:getComputedStyle(e).position};
+  };
+  return {warrior:select('#offline-select .mini-class[data-class="warrior"]'),
+    appearance:select('#offline-appearance'),appearanceHead:select('#offline-appearance .ac-head'),
+    preview:select('#offline-preview-container'),
+    action:select('#btn-start-offline')};
+ });
+ console.log('R9_CREATOR_LAYOUT_GEOMETRY '+JSON.stringify(placement));
  await page.locator('#offline-select .mini-class[data-class="warrior"]').click();
  await page.waitForFunction(()=>{
    const el=document.querySelector('#offline-preview-container canvas');
