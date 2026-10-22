@@ -165,6 +165,11 @@ jobs:
           html.write_text(page)
           print('R8_REBIRTH_LOADING_BRAND_AND_S23_BUTTONS=PASS')
           PY
+      - name: R9 enforce canonical source media routes before Vite
+        run: |
+          set -euo pipefail
+          python3 release/scripts/highfly_rebirth_r9_audit.py source candidate
+          (cd candidate && pnpm exec tsc --noEmit --incremental false)
       - name: Build native ClaudeCraft plus REBIRTH
         working-directory: candidate
         env:
@@ -229,7 +234,7 @@ jobs:
           index=(root/'index.html').read_text()
           assert '/HIGHFLY-REBIRTH/assets/' in index,'INCORRECT_GITHUB_PAGES_ASSET_BASE'
           (root/'rebirth-version.json').write_text(json.dumps({
-            'version':'REBIRTH-R6','base':'ClaudeCraft-v0.44.7',
+            'version':'REBIRTH-R9','base':'ClaudeCraft-v0.44.7',
             'classes':9,'training':True,'offline_save':'rebirth-only',
             'HP_MP_EN':'level-one','S23_real_qa':'PENDING',
             'root_main_cobalt':'NOT_MODIFIED'
@@ -282,6 +287,19 @@ jobs:
         run: |
           node scripts/build_media_manifest.mjs prune
           test -s dist/media/models/creatures/bull.a00c2c292526.glb
+      - name: R9 audit every emitted asset and browser-managed absolute path
+        run: |
+          set -euo pipefail
+          python3 release/scripts/highfly_rebirth_r9_audit.py dist candidate
+      - name: R9 install isolated Chromium browser smoke
+        working-directory: candidate
+        run: pnpm exec playwright install chromium
+      - name: R9 mobile Chromium native preview and real offline world boot
+        working-directory: candidate
+        timeout-minutes: 12
+        run: |
+          cp ../release/scripts/highfly_rebirth_r9_browser.mjs scripts/highfly_rebirth_r9_browser.mjs
+          node scripts/highfly_rebirth_r9_browser.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
