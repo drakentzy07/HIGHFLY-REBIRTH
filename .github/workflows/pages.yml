@@ -300,6 +300,14 @@ jobs:
         run: |
           cp ../release/scripts/highfly_rebirth_r9_browser.mjs scripts/highfly_rebirth_r9_browser.mjs
           node scripts/highfly_rebirth_r9_browser.mjs
+      - name: Preserve actual S23 Chromium failure screenshot and requests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: highfly-rebirth-r9-browser-forensics
+          path: candidate/.run-diagnostics/
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
