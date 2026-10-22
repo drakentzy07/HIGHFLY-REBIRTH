@@ -70,7 +70,52 @@ def source_patch():
     if code.count(old_preview) != 1:
         raise AssertionError("R9_NATIVE_CHARACTER_PREVIEW_ANCHOR_CHANGED")
     code = code.replace(old_preview,new_preview)
+    # R11 real mobile-entry correction: the native phone-only install/
+    # fullscreen preflight holds startOffline() behind a modal Promise.
+    # HIGHFLY already asks for fullscreen on its own entry gesture, so
+    # REBIRTH must enter the world directly with the original Sim untouched.
+    # Other ClaudeCraft modes retain their native preflight.
+    old_entry = """  if (useTouchInterface()) {
+    await showMobilePreflightPrompt();
+  } else {
+    requestPreferredFullscreen();
+  }"""
+    new_entry = """  if (useTouchInterface()) {
+    if (import.meta.env.VITE_HIGHFLY_REBIRTH_PREVIEW === '1' &&
+        new URLSearchParams(location.search).get('hfRebirth') === '1' &&
+        location.pathname.startsWith(import.meta.env.BASE_URL)) {
+      requestMobileFullscreenLandscape(); // one user gesture, no duplicate popup
+    } else {
+      await showMobilePreflightPrompt();
+    }
+  } else {
+    requestPreferredFullscreen();
+  }"""
+    if code.count(old_entry)!=1:
+        raise AssertionError("R11_NATIVE_MOBILE_PREFLIGHT_ANCHOR_DRIFT")
+    code=code.replace(old_entry,new_entry)
     main.write_text(code)
+    print("R11_HIGHFLY_REBIRTH_MOBILE_ENTRY_NO_EXTRA_MODAL=PASS")
+
+    # R9 native ES catalogue fix: the Warrior/Hunter creator still read
+    # classDetails.resources.rage/focus from the original translations.
+    # Keep the internal class resourceType unchanged (nine native skill mechanics)
+    # and expose the actual REBIRTH secondary pool label: Energia.
+    # This is safer than a late DOM MutationObserver or rewriting skill costs.
+    shell_i18n = candidate / "src/ui/i18n.catalog/shell.ts"
+    shell_src = shell_i18n.read_text()
+    old_es = "        rage: 'Ira',\\n        focus: 'Concentración',"
+    new_es = "        rage: 'Energía',\\n        focus: 'Energía',"
+    # The checked-in TypeScript file uses real line breaks in its source.
+    old_es = old_es.replace('\\n','\n')
+    new_es = new_es.replace('\\n','\n')
+    # Native shell.ts includes both es and es-419, so BOTH localizations
+    # must be corrected. Keep a strict nonzero guard against upstream drift.
+    match_count=shell_src.count(old_es)
+    if match_count < 1 or match_count > 3:
+        raise AssertionError("R9_ES_CLASS_RESOURCE_LABEL_ANCHOR_DRIFT "+str(match_count))
+    shell_i18n.write_text(shell_src.replace(old_es,new_es))
+    print("R9_ES_CLASS_RESOURCE_LABELS_REPAIRED",match_count)
 
     # R7 must NOT rewrite raw logical paths to absolute Pages URLs during
     # bundling: a manifest maps logical keys, never Pages-specific strings.
