@@ -22,6 +22,7 @@ const mime={
  '.webp':'image/webp','.ogg':'audio/ogg','.mp3':'audio/mpeg',
 };
 const missing=[];
+const diagnostics={bootConsole:[],failedResources:[],stages:[]};
 const server=createServer((req,res)=>{
  const raw=new URL(req.url||'/', 'http://127.0.0.1:4187').pathname;
  const scoped=raw===PREFIX||raw.startsWith(PREFIX+'/');
@@ -76,12 +77,18 @@ try{
  });
  page.on('console',m=>{
    const str=m.text();
+   if(/\[entry-guard\]|\[load-profile\]|deferred preload|asset load failed|prewarm failed|character preview assets failed/i.test(str)){
+     diagnostics.bootConsole.push({type:m.type(),text:str.slice(0,700)});
+     if(diagnostics.bootConsole.length>150)diagnostics.bootConsole.shift();
+   }
    if(m.type()==='error'||(m.type()==='warning' && /webgl|ktx2|glb|character|preview|transcode|shader|wasm/i.test(str)))
      consoleIssues.push(m.type()+': '+str.slice(0,500));
    if(/asset load failed|missing file or bad GLB|Error: Failed to fetch/i.test(str))
      failures.push('BROWSER '+str.slice(0,300));
  });
- const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&lang=es';
+ // Low is the official source game's graphics-tier smoke for headless
+// SwiftShader; full quality on S23 is checked separately, not inferred.
+const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&lang=es&gfx=low';
  await page.goto(url,{waitUntil:'load',timeout:60000});
  await page.locator('#hf-r7-enter').click();
  await page.locator('#offline-select').waitFor({state:'visible',timeout:40000});
@@ -120,7 +127,8 @@ try{
      return {canvasParent:c?.parentElement?.id,canvasSize:c?{width:c.width,height:c.height}:null,
        canvas:box(c),offline:box(o),online:box(n),
        loadingStatus:document.getElementById('ls-status')?.textContent,
-       pageText:document.body.innerText.slice(-900)};
+       pageText:document.body.innerText.slice(-900),loadingProgress:document.getElementById('ls-fill')?.style.width,
+       loadProfile:!!window.__loadProfile};
    });
    await page.screenshot({path:join(DIAG,'preview-failure.png'),fullPage:true,timeout:10000}).catch(()=>{});
    console.error('R9_PREVIEW_FORENSICS '+JSON.stringify({
@@ -152,12 +160,13 @@ try{
        gameScreen:visible('#game-container'),loadingScreen:visible('#loading-screen'),
        loadingStatus:visible('#ls-status'),
        authScreen:visible('#offline-select'),
-       assetError:visible('#asset-error'),
+       assetError:visible('#asset-error'),fatalOverlay:visible('#disconnect-overlay'),
        allCanvases:[...document.querySelectorAll('canvas')].map(x=>({
          id:x.id,parent:x.parentElement?.id,width:x.width,height:x.height})),
        storageKeys:localStorageKeys,bodyText:document.body.innerText.slice(-1100)};
    });
-   const payload={reason,state,networkTail:network.slice(-45),errors:failures.slice(-30),
+   const payload={reason,state,bootConsole:diagnostics.bootConsole.slice(-70),
+     networkTail:network.slice(-45),errors:failures.slice(-30),
      consoleIssues:consoleIssues.slice(-35),requestFailures:requestFailures.slice(-24),
      serverMissing:missing.slice(-30)};
    console.error('R9_WORLD_FORENSICS '+JSON.stringify(payload));
