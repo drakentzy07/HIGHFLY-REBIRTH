@@ -130,11 +130,42 @@ try{
  if(failures.length)throw Error('R9_PREVIEW_ASSET_FAILURE '+failures.slice(0,8).join(' | '));
  await page.locator('#char-name').fill('R9AuditHunter');
  await page.locator('#btn-start-offline').click();
+ async function captureWorldForensics(reason){
+   const state=await page.evaluate(()=>{
+     const visible=(selector)=>{
+       const e=document.querySelector(selector);if(!e)return null;
+       const css=getComputedStyle(e);const r=e.getBoundingClientRect();
+       return {visible:css.visibility,display:css.display,width:r.width,height:r.height,
+         classes:e.className,text:e.textContent?.slice(0,220)};
+     };
+     const localStorageKeys=Object.keys(localStorage).filter(x=>/highfly|rebirth|save|character/i.test(x));
+     return {location:location.href,ready:document.readyState,
+       gameDefined:!!window.__game,hasSim:!!window.__game?.sim,
+       playerDefined:!!window.__game?.sim?.player,
+       gameScreen:visible('#game-container'),loadingScreen:visible('#loading-screen'),
+       loadingStatus:visible('#ls-status'),
+       authScreen:visible('#offline-select'),
+       assetError:visible('#asset-error'),
+       allCanvases:[...document.querySelectorAll('canvas')].map(x=>({
+         id:x.id,parent:x.parentElement?.id,width:x.width,height:x.height})),
+       storageKeys:localStorageKeys,bodyText:document.body.innerText.slice(-1100)};
+   });
+   const payload={reason,state,networkTail:network.slice(-45),errors:failures.slice(-30),
+     consoleIssues:consoleIssues.slice(-35),requestFailures:requestFailures.slice(-24),
+     serverMissing:missing.slice(-30)};
+   console.error('R9_WORLD_FORENSICS '+JSON.stringify(payload));
+   return payload;
+ }
+ try {
  await page.waitForFunction(()=>{
    const l=document.querySelector('#loading-screen');
    return Boolean(window.__game?.sim?.player) &&
      (!l || !l.classList.contains('visible'));
- },null,{timeout:220000,polling:500});
+ },null,{timeout:180000,polling:500});
+ }catch(err) {
+   await captureWorldForensics(err?.message||'WORLD_TIMEOUT');
+   throw new Error('R9_WORLD_FAILED_SEE_FORENSICS: '+String(err?.message||err));
+ }
  if(failures.length)throw Error('R9_WORLD_ASSET_ERRORS '+failures.slice(0,12).join(' | '));
  const missingAssets=missing.filter(p=>/\.(glb|ktx2|wasm|woff2?|png|webp)(\?|$)/.test(p));
  if(missingAssets.length)throw Error('R9_WORLD_404_ASSETS '+missingAssets.slice(0,12).join(','));
