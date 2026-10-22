@@ -196,6 +196,35 @@ def dist_audit():
         raise AssertionError("R9_UNSCOPED_PWA_MANIFEST")
     js=list((outdir/"assets").glob("*.js"))
     if not js:raise AssertionError("R9_MISSING_GAME_JS")
+    # Inspect actual HTML/CSS asset addresses beyond the media manifest.
+    # These fetches are issued by the browser itself (fonts/images), bypassing
+    # JavaScript fetch wrappers entirely.
+    unresolved=[]
+    root_assets=(".png",".jpg",".jpeg",".svg",".webp",".woff",".woff2",
+                 ".glb",".ktx2",".wasm",".ogg",".mp3",".mp4",".css",".js")
+    for file in outdir.rglob("*"):
+        if not file.is_file() or file.suffix.lower() not in (".html",".css"):
+            continue
+        body=file.read_text(errors="replace")
+        refs=re.findall(r'(?:src|href)\s*=\s*["\x27]([^"\x27]+)["\x27]',body)
+        refs+=re.findall(r'url\(\s*["\x27]?([^\s)"\x27]+)',body)
+        for ref in refs:
+            path=ref.split("?",1)[0].split("#",1)[0]
+            if path.startswith(("data:","http:","https:","blob:","//","#")):continue
+            if not path.lower().endswith(root_assets):continue
+            if path.startswith(BASE+"/"):
+                local=outdir/path[len(BASE)+1:]
+            elif path.startswith("/"):
+                unresolved.append(str(file.relative_to(outdir))+": root URL "+path)
+                continue
+            else:
+                local=(file.parent/path).resolve()
+            if not local.is_file():
+                unresolved.append(str(file.relative_to(outdir))+": not published "+path)
+        if len(unresolved)>100:break
+    if unresolved:
+        raise AssertionError("R9_HTML_CSS_DIRECT_ASSETS_INVALID_COUNT="+str(len(unresolved))+
+                             " sample="+repr(unresolved[:15]))
     media=(candidate/"src/render/assets/media.ts").read_text()
     if "original.startsWith(base.slice(1) + '/')" not in media:
         raise AssertionError("R9_CANONICAL_ASSET_URL_NOT_INSTALLED")
@@ -210,6 +239,7 @@ def dist_audit():
       "GLB_valid_headers":counts.get(".glb",0),
       "KTX2_verified":counts.get(".ktx2",0),
       "pwa_scope":"PASS",
+      "direct_html_css_assets":"PASS",
       "mobile_creator":"needs physical S23 test",
       "world_loading":"needs physical S23 test",
       "source_repo":"ClaudeCraft-v0.44.7",
