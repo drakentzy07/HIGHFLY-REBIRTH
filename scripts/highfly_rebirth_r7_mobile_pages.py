@@ -9,7 +9,7 @@ import sys
 
 mode, location = sys.argv[1], Path(sys.argv[2])
 ROOT = "/HIGHFLY-REBIRTH"
-DIRS = ("models","textures","env","vfx","ui","audio","basis","fonts",
+DIRS = ("ui","audio","basis","fonts",
         "claudium","guide-stills","highfly","map_art","map_bg")
 ALT = "|".join(map(re.escape, DIRS))
 # Match URLs written as quoted literals or CSS URL, including built JS chunks.
@@ -226,12 +226,10 @@ elif mode=="dist":
     assert "hf-r7" in html and "requestFullscreen" in html,"R7_FULLSCREEN_MISSING"
     assert "offline-preview-container" in html and "body" in html,"R7_CREATOR_MISSING"
     assert "/HIGHFLY-REBIRTH/assets/" in html, "R7_BUNDLE_PREFIX_MISSING"
-    suspect=[]
-    for p in (dist/"assets").glob("*.js"):
-        s=p.read_text(errors="replace")
-        if re.search(r"""["'\x60]/(?:models|textures|env|vfx)/""",s):
-            suspect.append(p.name)
-    assert not suspect, "R7_UNREWRITTEN_ROOT_STATIC_ASSETS "+repr(suspect[:8])
+    # R9: bare /models, /textures, /env and /vfx are LOGICAL keys for
+    # MEDIA_ASSETS. Rewriting them to Pages paths before assetUrl() breaks all
+    # hashed GLB lookups. The R9 media-route gateway and exhaustive contract
+    # gate handle direct fetches separately.
     info={"entry":"HIGHFLY REBIRTH R7","locale":"es via URL","s23Fullscreen":"requires user tap",
           "nineNativeClasses":True,"nativeCharacterCreator":True,"rebirthSave":"R6 isolated",
           "staticFilesChecked":["models/props/column.glb","models/props/column_broken.glb",
