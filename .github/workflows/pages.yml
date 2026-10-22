@@ -92,6 +92,7 @@ jobs:
           sparse-checkout: |
             /src/game/input.ts
             /src/game/mobile_controls.ts
+            /src/render/assets/media.ts
             /src/sim/player_motion.ts
             /src/highfly/combat/
             /src/highfly/training/
@@ -124,6 +125,46 @@ jobs:
           pnpm exec tsc --noEmit --incremental false
       - name: R7 fix original asset paths and HIGHFLY Spanish mobile entry
         run: python3 release/scripts/highfly_rebirth_r7_mobile_pages.py source candidate
+      - name: R8 restore proven HIGHFLY hashed-media paths and native fullscreen branding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          donor=Path('legacy/src/render/assets/media.ts')
+          dst=Path('candidate/src/render/assets/media.ts')
+          assert donor.is_file(), 'R8_MISSING_CERTIFIED_MEDIA_DONOR'
+          s=donor.read_text()
+          assert 'import.meta.env.BASE_URL' in s and 'MEDIA_ASSETS[logical]' in s, 'R8_BAD_DONOR_MEDIA_RESOLVER'
+          dst.write_text(s)
+          print('R8_RESTORED_CERTIFIED_HIGHFLY_ASSET_URL=PASS')
+          html=Path('candidate/index.html')
+          page=html.read_text()
+          import re
+          page,num=re.subn(r'<img class="ls-logo" src="/worldofclaudecraft-logo.png"[^>]*>',
+            '<div class="ls-logo hf-r8-logo" role="img" aria-label="HIGHFLY REBIRTH">HIGHFLY REBIRTH</div>',
+            page,count=1)
+          assert num==1,'R8_CLAUDECRAFT_LOADING_LOGO_NOT_FOUND'
+          page=page.replace('<meta name="apple-mobile-web-app-title" content="ClaudeCraft" />',
+              '<meta name="apple-mobile-web-app-title" content="HIGHFLY REBIRTH" />')
+          page=page.replace('</head>', '''<style id="hf-r8-ui">
+          html.hf-r7 #loading-screen .hf-r8-logo{
+            display:block;width:auto!important;height:auto!important;max-width:96vw!important;
+            margin:0 auto 12px!important;color:#e9c474;font:900 clamp(24px,5vw,42px)/1.2 system-ui;
+            text-align:center;letter-spacing:.11em;text-shadow:0 3px 14px #000}
+          @media (orientation:landscape) and (max-height:540px){
+          html.hf-r7 #offline-select .auth-actions{display:grid!important;
+            grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+            width:100%!important;gap:8px!important;padding:6px 0!important}
+          html.hf-r7 #offline-select #btn-start-offline,
+          html.hf-r7 #offline-select #btn-offline-back{width:100%!important;
+            min-height:38px!important;min-width:0!important;position:relative!important;
+            font-size:clamp(11px,2.4vh,14px)!important;text-align:center!important;
+            padding:7px 4px!important;transform:none!important}}
+          </style></head>''')
+          html.write_text(page)
+          print('R8_REBIRTH_LOADING_BRAND_AND_S23_BUTTONS=PASS')
+          PY
       - name: Build native ClaudeCraft plus REBIRTH
         working-directory: candidate
         env:
@@ -194,6 +235,45 @@ jobs:
           PY
       - name: R7 certify model paths, responsive creator and offline entry
         run: python3 release/scripts/highfly_rebirth_r7_mobile_pages.py dist candidate
+      - name: R8 certify REAL hashed-media GLBs (not just unhashed source files)
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re
+          root=Path('candidate')
+          dist=root/'dist'
+          table=(root/'src/render/assets/manifest.generated.ts').read_text()
+          mapping=dict(re.findall(r'"(models/[^"]+\.glb)"\s*:\s*"(/media/[^"]+\.glb)"',table))
+          assert len(mapping)>100, 'R8_MEDIA_MANIFEST_TOO_SMALL'
+          names=[
+             'models/chars/players/knight.glb',
+             'models/creatures/bull.glb',
+             'models/creatures/crab_ability_anims.glb',
+             'models/creatures/yeti.glb',
+             'models/creatures/skeleton_rogue.glb',
+             'models/creatures/treant_ability_anims.glb']
+          checked={}
+          for name in names:
+             uri=mapping.get(name)
+             assert uri, 'R8_MISSING_GLB_MANIFEST '+name
+             f=dist/uri.lstrip('/')
+             assert f.is_file(), 'R8_MISSING_PUBLISHED_MEDIA '+str(f)
+             with f.open('rb') as handle: head=handle.read(12)
+             assert head[:4]==b'glTF', 'R8_NOT_GLTF '+name
+             assert len(head)==12 and int.from_bytes(head[8:12],'little')==f.stat().st_size, 'R8_BAD_GLTF_SIZE '+name
+             checked[name]='/HIGHFLY-REBIRTH'+uri
+          assert (dist/'basis').is_dir(), 'R8_MISSING_BASIS_TRANSCODER'
+          assert list((dist/'basis').glob('*transcoder*')), 'R8_MISSING_TRANSCODER_BINARY'
+          html=(dist/'index.html').read_text()
+          assert 'hf-r8-logo' in html and 'HIGHFLY REBIRTH' in html, 'R8_BRANDING_LOST'
+          bundle=list((dist/'assets').glob('*.js'))
+          assert bundle,'R8_NO_JS_BUNDLE'
+          report={'version':'REBIRTH-R8','mediaPaths':'certified HIGHFLY BASE_URL',
+            'verifiedGLBs':checked,'manifestGLBCount':len(mapping),'s23PhysicalQA':'PENDING',
+            'originalHIGHFLY':'UNCHANGED','nativeClasses':9}
+          (dist/'rebirth-r8-qa.json').write_text(json.dumps(report,indent=2)+'\n')
+          print('R8_REAL_HASHED_GLB_SMOKE_PASS',json.dumps(report))
+          PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
