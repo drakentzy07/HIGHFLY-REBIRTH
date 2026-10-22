@@ -311,5 +311,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
       - name: Complete entry recovery browser validation (no publish)
-        run: echo "REBIRTH_ENTRY_QA_PASS: real Chromium creator, GLB world and save validated."
+        run: |
+          echo "REBIRTH_ENTRY_QA_PASS: real Chromium creator, GLB world and save validated."
   # This workflow never modifies the existing drakentzy07/cobalt-hollow-lab Pages.
