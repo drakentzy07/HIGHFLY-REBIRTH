@@ -84,9 +84,13 @@ def source_patch():
     # The checked-in TypeScript file uses real line breaks in its source.
     old_es = old_es.replace('\\n','\n')
     new_es = new_es.replace('\\n','\n')
-    if shell_src.count(old_es) != 1:
-        raise AssertionError("R9_ES_CLASS_RESOURCE_LABEL_ANCHOR_DRIFT")
+    # Native shell.ts includes both es and es-419, so BOTH localizations
+    # must be corrected. Keep a strict nonzero guard against upstream drift.
+    match_count=shell_src.count(old_es)
+    if match_count < 1 or match_count > 3:
+        raise AssertionError("R9_ES_CLASS_RESOURCE_LABEL_ANCHOR_DRIFT "+str(match_count))
     shell_i18n.write_text(shell_src.replace(old_es,new_es))
+    print("R9_ES_CLASS_RESOURCE_LABELS_REPAIRED",match_count)
 
     # R7 must NOT rewrite raw logical paths to absolute Pages URLs during
     # bundling: a manifest maps logical keys, never Pages-specific strings.
