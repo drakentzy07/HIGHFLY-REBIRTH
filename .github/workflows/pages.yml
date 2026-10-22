@@ -190,6 +190,9 @@ jobs:
           print('REBIRTH_PUBLIC_RELATIVE_ASSETS_REWRITTEN',count)
           PY
           pnpm exec vite build --base=/HIGHFLY-REBIRTH/
+          # Native ClaudeCraft build: emit hashed /media assets AFTER Vite; otherwise GLB URLs 404.
+          node scripts/build_media_manifest.mjs emit
+          test -s dist/media/models/creatures/bull.a00c2c292526.glb
           test -s dist/index.html
           test -s dist/play.html
           test -s dist/editor.html
