@@ -5,11 +5,13 @@
  * A green static build alone is insufficient.
  */
 import { createServer } from 'node:http';
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, join, extname, sep } from 'node:path';
 import { chromium } from 'playwright';
 
 const ROOT=resolve(process.cwd(),'dist');
+const DIAG=resolve(process.cwd(),'.run-diagnostics');
+mkdirSync(DIAG,{recursive:true});
 const PREFIX='/HIGHFLY-REBIRTH';
 const mime={
  '.js':'text/javascript;charset=utf-8','.html':'text/html;charset=utf-8',
@@ -120,6 +122,7 @@ try{
        loadingStatus:document.getElementById('ls-status')?.textContent,
        pageText:document.body.innerText.slice(-900)};
    });
+   await page.screenshot({path:join(DIAG,'preview-failure.png'),fullPage:true,timeout:10000}).catch(()=>{});
    console.error('R9_PREVIEW_FORENSICS '+JSON.stringify({
      state,glbs:network.filter(x=>x.path.endsWith('.glb')).slice(-20),
      issueCount:consoleIssues.length,consoleIssues:consoleIssues.slice(-24),
@@ -158,6 +161,8 @@ try{
      consoleIssues:consoleIssues.slice(-35),requestFailures:requestFailures.slice(-24),
      serverMissing:missing.slice(-30)};
    console.error('R9_WORLD_FORENSICS '+JSON.stringify(payload));
+   writeFileSync(join(DIAG,'world-failure.json'),JSON.stringify(payload,null,2)+'\n');
+   await page.screenshot({path:join(DIAG,'world-failure.png'),fullPage:true,timeout:10000}).catch(()=>{});
    return payload;
  }
  try {
