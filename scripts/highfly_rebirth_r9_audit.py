@@ -131,6 +131,58 @@ else start();
 """
     if page.count("</body>") != 1: raise AssertionError("R9_HTML_BODY_DRIFT")
     page = page.replace("</body>",label_fix+"</body>")
+    # The native WoW-style desktop takeover uses absolute positioning. R7's
+    # forced mobile grid kept pieces of that takeover and let the appearance
+    # customizer float over the 9 class buttons. Restore normal flow INSIDE
+    # each independently scrolling creator column, with a clear touch stack.
+    creator_css = """<style id="hf-r9-creator-no-overlap">
+@media (orientation:landscape) and (max-height:540px){
+ html.hf-r7 #offline-select.cs-wow .char-create{
+   position:relative!important;display:flex!important;flex-direction:column!important;
+   justify-content:flex-start!important;align-items:stretch!important;
+   width:100%!important;max-width:100%!important;
+   height:auto!important;min-height:max-content!important;
+   flex:0 0 auto!important;overflow:visible!important;
+ }
+ html.hf-r7 #offline-select.cs-wow .mini-class-row{
+   position:relative!important;left:auto!important;right:auto!important;
+   top:auto!important;bottom:auto!important;inset:auto!important;
+   display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+   width:100%!important;height:auto!important;
+   flex:0 0 auto!important;clear:both!important;
+   margin:4px 0 8px!important;padding:0!important;
+   z-index:30!important;transform:none!important;
+ }
+ html.hf-r7 #offline-select.cs-wow #offline-appearance{
+   position:relative!important;left:auto!important;right:auto!important;
+   top:auto!important;bottom:auto!important;inset:auto!important;
+   display:block!important;width:100%!important;max-width:100%!important;
+   min-height:0!important;height:auto!important;max-height:none!important;
+   flex:0 0 auto!important;clear:both!important;
+   margin:6px 0 8px!important;padding:0!important;transform:none!important;
+   z-index:1!important;box-sizing:border-box!important;
+ }
+ html.hf-r7 #offline-select.cs-wow #offline-appearance .appearance-customizer{
+   position:relative!important;left:auto!important;right:auto!important;
+   top:auto!important;bottom:auto!important;inset:auto!important;
+   display:flex!important;flex-direction:column!important;
+   width:100%!important;max-width:100%!important;
+   min-height:0!important;height:auto!important;max-height:none!important;
+   margin:0!important;transform:none!important;
+   box-sizing:border-box!important;z-index:1!important;
+ }
+ html.hf-r7 #offline-select.cs-wow .charselect-col-left{
+   overflow-y:auto!important;overflow-x:hidden!important;
+   overscroll-behavior:contain!important;
+ }
+ html.hf-r7 #offline-select.cs-wow .auth-actions{
+   position:relative!important;z-index:2!important;flex:0 0 auto!important;
+   margin:8px 0 3px!important;
+ }
+}
+</style>"""
+    if page.count("</head>") != 1:raise AssertionError("R9_CREATOR_CSS_HEAD_DRIFT")
+    page=page.replace("</head>",creator_css+"</head>")
     html.write_text(page)
     print("R9_SOURCE_PASS",len(mapping),"logical assets routed without prefix corruption")
 
