@@ -72,6 +72,22 @@ def source_patch():
     code = code.replace(old_preview,new_preview)
     main.write_text(code)
 
+    # R9 native ES catalogue fix: the Warrior/Hunter creator still read
+    # classDetails.resources.rage/focus from the original translations.
+    # Keep the internal class resourceType unchanged (nine native skill mechanics)
+    # and expose the actual REBIRTH secondary pool label: Energia.
+    # This is safer than a late DOM MutationObserver or rewriting skill costs.
+    shell_i18n = candidate / "src/ui/i18n.catalog/shell.ts"
+    shell_src = shell_i18n.read_text()
+    old_es = "        rage: 'Ira',\\n        focus: 'Concentración',"
+    new_es = "        rage: 'Energía',\\n        focus: 'Energía',"
+    # The checked-in TypeScript file uses real line breaks in its source.
+    old_es = old_es.replace('\\n','\n')
+    new_es = new_es.replace('\\n','\n')
+    if shell_src.count(old_es) != 1:
+        raise AssertionError("R9_ES_CLASS_RESOURCE_LABEL_ANCHOR_DRIFT")
+    shell_i18n.write_text(shell_src.replace(old_es,new_es))
+
     # R7 must NOT rewrite raw logical paths to absolute Pages URLs during
     # bundling: a manifest maps logical keys, never Pages-specific strings.
     offenders = []
