@@ -63,9 +63,13 @@ try{
  page.on('pageerror',err=>{const msg='JS '+String(err).slice(0,400);failures.push(msg);consoleIssues.push(msg);});
  page.on('requestfailed',req=>requestFailures.push({url:req.url(),error:req.failure()?.errorText}));
  page.on('response',r=>{
-   if(/\.(glb|ktx2|wasm)(\?|$)/.test(new URL(r.url()).pathname)){
-     network.push({status:r.status(),path:new URL(r.url()).pathname});
+   const path=new URL(r.url()).pathname;
+   if(/\.(glb|ktx2|wasm)(\?|$)/.test(path)){
+     network.push({status:r.status(),path});
      if(r.status()>=400)failures.push('ASSET HTTP '+r.status()+' '+r.url());
+   }
+   if(r.status()>=400 && /\.(glb|ktx2|wasm|js|css|woff2?|jpg|png|webp|hdr)(\?|$)/i.test(path)){
+     failures.push('HTTP '+r.status()+' '+r.url());
    }
  });
  page.on('console',m=>{
