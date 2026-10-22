@@ -19,6 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
+      - uses: actions/checkout@v4
+        with:
+          path: release
+          persist-credentials: false
       - name: Only dedicated preview repository may deploy
         shell: bash
         run: |
@@ -118,6 +122,8 @@ jobs:
           corepack prepare pnpm@10.34.5 --activate
           pnpm install --frozen-lockfile --ignore-scripts
           pnpm exec tsc --noEmit --incremental false
+      - name: R7 fix original asset paths and HIGHFLY Spanish mobile entry
+        run: python3 release/scripts/highfly_rebirth_r7_mobile_pages.py source candidate
       - name: Build native ClaudeCraft plus REBIRTH
         working-directory: candidate
         env:
@@ -186,6 +192,8 @@ jobs:
           },indent=2)+'\n')
           (root/'.nojekyll').touch()
           PY
+      - name: R7 certify model paths, responsive creator and offline entry
+        run: python3 release/scripts/highfly_rebirth_r7_mobile_pages.py dist candidate
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
