@@ -145,6 +145,27 @@ def check_glb(path):
 def dist_audit():
     mapping=manifest()
     if not outdir.is_dir(): raise AssertionError("R9_MISSING_DIST")
+    # CSS url() and HTML src/href load through the BROWSER, bypassing the
+    # runtime fetch/XHR gateway. Resolve every logical media URL directly to
+    # the same hashed /media file before the exhaustive no-404 scan.
+    media_links = re.compile(
+        r'(?P<root>/HIGHFLY-REBIRTH/|/)(?P<logical>(?:models|textures|env|vfx)/[A-Za-z0-9_./-]+)'
+    )
+    rewrites = 0
+    for f in outdir.rglob("*"):
+        if not f.is_file() or f.suffix.lower() not in (".css",".html",".svg",".xml"):
+            continue
+        old = f.read_text(errors="replace")
+        def map_direct(m):
+            logical = m.group("logical")
+            if logical not in mapping:
+                return m.group(0)   # The separate no-404 scan will fail unknowns.
+            return BASE+mapping[logical]
+        new = media_links.sub(map_direct,old)
+        if new != old:
+            f.write_text(new)
+            rewrites+=1
+    print("R9_CSS_HTML_DIRECT_MEDIA_ALIAS_REPAIRED",rewrites)
     total_bytes=0
     counts={}
     failures=[]
@@ -244,6 +265,7 @@ def dist_audit():
       "KTX2_verified":counts.get(".ktx2",0),
       "pwa_scope":"PASS",
       "direct_html_css_assets":"PASS",
+      "css_html_rewritten_files":rewrites,
       "mobile_creator":"needs physical S23 test",
       "world_loading":"needs physical S23 test",
       "source_repo":"ClaudeCraft-v0.44.7",
