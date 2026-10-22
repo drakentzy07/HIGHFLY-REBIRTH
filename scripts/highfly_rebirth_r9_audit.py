@@ -70,7 +70,32 @@ def source_patch():
     if code.count(old_preview) != 1:
         raise AssertionError("R9_NATIVE_CHARACTER_PREVIEW_ANCHOR_CHANGED")
     code = code.replace(old_preview,new_preview)
+    # R11 real mobile-entry correction: the native phone-only install/
+    # fullscreen preflight holds startOffline() behind a modal Promise.
+    # HIGHFLY already asks for fullscreen on its own entry gesture, so
+    # REBIRTH must enter the world directly with the original Sim untouched.
+    # Other ClaudeCraft modes retain their native preflight.
+    old_entry = """  if (useTouchInterface()) {
+    await showMobilePreflightPrompt();
+  } else {
+    requestPreferredFullscreen();
+  }"""
+    new_entry = """  if (useTouchInterface()) {
+    if (import.meta.env.VITE_HIGHFLY_REBIRTH_PREVIEW === '1' &&
+        new URLSearchParams(location.search).get('hfRebirth') === '1' &&
+        location.pathname.startsWith(import.meta.env.BASE_URL)) {
+      requestMobileFullscreenLandscape(); // one user gesture, no duplicate popup
+    } else {
+      await showMobilePreflightPrompt();
+    }
+  } else {
+    requestPreferredFullscreen();
+  }"""
+    if code.count(old_entry)!=1:
+        raise AssertionError("R11_NATIVE_MOBILE_PREFLIGHT_ANCHOR_DRIFT")
+    code=code.replace(old_entry,new_entry)
     main.write_text(code)
+    print("R11_HIGHFLY_REBIRTH_MOBILE_ENTRY_NO_EXTRA_MODAL=PASS")
 
     # R9 native ES catalogue fix: the Warrior/Hunter creator still read
     # classDetails.resources.rage/focus from the original translations.
