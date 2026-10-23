@@ -37,7 +37,7 @@ edit("src/game/mobile_controls.ts",[
         // HIGHFLY: primary touch browsers can deliver a delayed compatibility
         // click after the 700-ms timer. Pointer identity, NOT a debounce clock,
         // owns Dash. Mouse/keyboard retain the normal click path.
-        if (id === 'mobile-evade' &&
+        if ((id === 'mobile-evade' || id === 'mobile-jump') &&
             (e as PointerEvent).pointerType === 'touch') {
           suppressNextClick = false;
           e.preventDefault();

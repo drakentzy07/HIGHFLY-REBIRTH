@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/rebirth-r14-freedom-test.yml"
       - "scripts/highfly_rebirth_r14_integral_browser_patch.py"
+      - "scripts/highfly_rebirth_r14_freedom.py"
       - "scripts/highfly_rebirth_r13_recovery.py"
       - "scripts/highfly_rebirth_r12_hud.py"
       - "scripts/highfly_rebirth_r12_aoe.py"
