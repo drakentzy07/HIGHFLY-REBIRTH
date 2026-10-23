@@ -45,6 +45,6 @@ assert s.count(creator_anchor)==1,"R16_CREATOR_PNG_TEST_DRIFT"
 s=s.replace(creator_anchor,creator_anchor+"\n  writeFileSync(join(DIAG,'r16-s23-creator.png'),png);",1)
 open_anchor=" await page.locator('#mobile-more').click();"
 assert s.count(open_anchor)==1,"R16_MENU_OPEN_TEST_DRIFT"
-s=s.replace(open_anchor," await page.screenshot({path:join(DIAG,'r16-s23-world-hud.png'),fullPage:false});\\n"+open_anchor,1)
+s=s.replace(open_anchor," await page.screenshot({path:join(DIAG,'r16-s23-world-hud.png'),fullPage:false});\n"+open_anchor,1)
 p.write_text(s,encoding="utf-8")
 print("R16_S23_ORIGINAL_MORE_AND_SINGLE_FRAME_BROWSER_ASSERTIONS_INSTALLED")
