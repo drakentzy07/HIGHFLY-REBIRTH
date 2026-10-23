@@ -11,6 +11,7 @@ on:
       - "scripts/highfly_rebirth_r14_freedom.py"
       - "scripts/highfly_rebirth_r15.py"
       - "scripts/highfly_rebirth_r16_visual.py"
+      - "scripts/highfly_rebirth_r16_progression.py"
       - "scripts/highfly_rebirth_r16_browser_patch.py"
       - "scripts/highfly_rebirth_r13_recovery.py"
       - "scripts/highfly_rebirth_r12_hud.py"
@@ -236,8 +237,9 @@ jobs:
           python3 release/scripts/highfly_rebirth_r14_freedom.py candidate
           python3 release/scripts/highfly_rebirth_r15.py candidate
           python3 release/scripts/highfly_rebirth_r16_visual.py candidate
+          python3 release/scripts/highfly_rebirth_r16_progression.py candidate
           test -s candidate/public/highfly-r13-status.json
-      - name: R16 typecheck with native 3D creator and ONE HUD
+      - name: R16 typecheck: native 3D creator, ONE HUD and training-only permanent stats
         working-directory: candidate
         run: pnpm exec tsc --noEmit --incremental false
       - name: Build native ClaudeCraft plus REBIRTH
