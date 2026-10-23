@@ -242,7 +242,7 @@ jobs:
           cp release/scripts/highfly_rebirth_r16_policy.test.mjs candidate/scripts/highfly_rebirth_r16_policy.test.mjs
           (cd candidate && node --experimental-strip-types --test scripts/highfly_rebirth_r16_policy.test.mjs)
           test -s candidate/public/highfly-r13-status.json
-      - name: R16 typecheck: native 3D creator, ONE HUD and training-only permanent stats
+      - name: "R16 typecheck — creator, one HUD, training-only Core"
         working-directory: candidate
         run: pnpm exec tsc --noEmit --incremental false
       - name: Build native ClaudeCraft plus REBIRTH
