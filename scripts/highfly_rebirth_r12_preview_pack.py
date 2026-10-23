@@ -49,6 +49,17 @@ if mode=="source":
     for p in list((candidate/"src").rglob("*")) + [candidate/n for n in ("index.html","play.html","admin.html","editor.html","guide.html")]:
         if p.is_file() and p.suffix.lower() in extensions:
             files+=int(rewrite(p))
+    # Vite's import.meta.env.BASE_URL is /fury-lab/ but the release
+    # intentionally shares the original R11 hashed /media/ tree. Resolve every
+    # native GLB and KTX2 through the SAME R11 resource. No asset duplication.
+    media_ts=candidate/"src/render/assets/media.ts"
+    media_js=media_ts.read_text()
+    anchor="  return base && raw.startsWith('/') && !raw.startsWith(`${base}/`) ? `${base}${raw}` : raw;"
+    assert media_js.count(anchor)==1,"R12_MEDIA_ROUTER_ANCHOR_DRIFT"
+    media_js=media_js.replace(anchor,
+       "  if (base.endsWith('/fury-lab') && raw.startsWith('/media/')) return '/HIGHFLY-REBIRTH' + raw;\\n" + anchor)
+    media_js=media_js.replace(";\\n  return base", ";\n  return base")
+    media_ts.write_text(media_js)
     index=(candidate/"index.html").read_text()
     assert lab in index,"R12_LAB_ASSET_BASE_NOT_REWRITTEN"
     print("R12_FURY_LAB_ISOLATED_SAVE_KEY",save_lab)
