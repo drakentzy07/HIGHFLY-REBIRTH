@@ -63,7 +63,11 @@ tests=r"""
  if(!jumpState0.onGround)await page.waitForTimeout(600);
  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:jump.cx,y:jump.cy,id:21}]});
  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
- await page.waitForTimeout(135);
+ await page.waitForFunction(()=>{
+   const p=window.__game.sim.player;
+   return p.highflyLastJumpSeq===1 && !p.onGround && p.jumping &&
+          p.highflyAirJumpUsed!==true;
+ },null,{timeout:2500,polling:25});
  const firstJump=await page.evaluate(()=>{
    const p=window.__game.sim.player;
    return {airborne:!p.onGround,used:!!p.highflyAirJumpUsed,
@@ -71,7 +75,11 @@ tests=r"""
  });
  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:jump.cx,y:jump.cy,id:22}]});
  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
- await page.waitForTimeout(135);
+ await page.waitForFunction(()=>{
+   const p=window.__game.sim.player;
+   return p.highflyLastJumpSeq===2 && !p.onGround &&
+      p.highflyAirJumpUsed===true && (p.highflyFlipBonusSeconds??0)>0;
+ },null,{timeout:2500,polling:25});
  const secondJump=await page.evaluate(()=>{
    const p=window.__game.sim.player;
    return {airborne:!p.onGround,used:!!p.highflyAirJumpUsed,

@@ -110,6 +110,27 @@ edit("src/sim/types.ts",[
   highflyFlipBonusSeconds?: number;"""),
 ])
 edit("src/sim/player_motion.ts",[
+ ("never_drop_jump_edge_on_slow_android_tick",
+  """  const highflyFreshJumpPress =
+    inp.jump &&
+    highflyJumpSeq !== 0 &&
+    highflyJumpSeq !== (p.highflyLastJumpSeq ?? 0);""",
+  """  // A 220ms touch latch may expire before a busy S23 frame reaches Sim.
+  // The monotonic input sequence stays durable until this SINGLE native tick
+  // acknowledges it; never generate a second jump from a held boolean.
+  const highflyFreshJumpPress =
+    highflyJumpSeq !== 0 &&
+    highflyJumpSeq !== (p.highflyLastJumpSeq ?? 0) &&
+    (inp.jump || inp.highflyAirDashEnabled === true);"""),
+ ("ground_jumps_durable_edge",
+  """  const startsGroundJump =
+    inp.jump && (p.onGround || coyote) && !isRooted(p) && !steepGround && !mountLocked;""",
+  """  const startsGroundJump =
+    (inp.jump || (inp.highflyAirDashEnabled === true && highflyFreshJumpPress)) &&
+    (p.onGround || coyote) && !isRooted(p) && !steepGround && !mountLocked;"""),
+])
+
+edit("src/sim/player_motion.ts",[
  ("flip_bonus_tick",
   """  if (p.onGround) p.highflyAirJumpUsed = false;""",
   """  if (p.onGround) p.highflyAirJumpUsed = false;

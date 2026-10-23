@@ -7,6 +7,8 @@ on:
     branches: [highfly-rebirth-r14-freedom-combat-20261023]
     paths:
       - ".github/workflows/rebirth-r14-pages.yml"
+      - "scripts/highfly_rebirth_r14_freedom.py"
+      - "scripts/highfly_rebirth_r14_integral_browser_patch.py"
   workflow_dispatch:
 permissions:
   contents: read
