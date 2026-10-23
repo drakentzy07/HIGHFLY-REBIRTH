@@ -283,7 +283,7 @@ css = r"""/* HIGHFLY R15 / responsive S23 landscape single native HUD */
 }
 """
 style=root/'src/highfly/rebirth/r15_style.css'
-style.write_text(css,encoding='utf8')
+style.write_text(css.replace(' body.mobile-touch.hf-rebirth-r2', ' html body.mobile-touch.hf-rebirth-r2'),encoding='utf8')
 edit('src/main.ts',[('r15_style_import',
 """import { Sim } from './sim/sim';""",
 """import { Sim } from './sim/sim';
