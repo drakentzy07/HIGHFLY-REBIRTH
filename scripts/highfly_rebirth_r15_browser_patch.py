@@ -30,6 +30,37 @@ once('preview',
   const r15Preview=await page.evaluate(()=>
     window.__hfR15PreviewDiagnostics?.()??null);
   console.log('R15_CREATOR_WEBGL_OWNER '+JSON.stringify(r15Preview));
+  // A live 3D CANVAS is not a visible CHARACTER. Audit actual raster pixels
+  // of the creator (excluding UI border) to detect the long-standing dark
+  // empty panel that passed all older GLB/DOM smoke tests.
+  await page.waitForTimeout(650);
+  const png=await page.locator('#offline-preview-container').screenshot({type:'png'});
+  const r15Raster=await page.evaluate(async(base64)=>{
+    const img=new Image();
+    img.src='data:image/png;base64,'+base64;
+    await img.decode();
+    const canvas=document.createElement('canvas');
+    canvas.width=img.width;canvas.height=img.height;
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});
+    if(!ctx)throw Error('R15_SCREENSHOT_DECODE_CONTEXT');
+    ctx.drawImage(img,0,0);
+    const data=ctx.getImageData(0,0,img.width,img.height).data;
+    const buckets=new Set();
+    let maxL=0,minL=255;
+    for(let y=Math.floor(img.height*.08);y<img.height*.94;y+=3)
+    for(let x=Math.floor(img.width*.15);x<img.width*.85;x+=3){
+      const i=(y*img.width+x)*4;
+      const r=data[i],g=data[i+1],b=data[i+2];
+      buckets.add((r>>4)*256+(g>>4)*16+(b>>4));
+      const v=(r*3+g*6+b)/10;
+      maxL=Math.max(maxL,v);minL=Math.min(minL,v);
+    }
+    return {width:img.width,height:img.height,
+      colorBuckets:buckets.size,luminanceRange:maxL-minL};
+  },png.toString('base64'));
+  console.log('R15_CREATOR_ACTUAL_3D_RASTER '+JSON.stringify(r15Raster));
+  if(r15Raster.colorBuckets<16||r15Raster.luminanceRange<30)
+    throw Error('R15_CREATOR_STILL_VISUALLY_BLANK '+JSON.stringify(r15Raster));
   if(!r15Preview?.mounted||!r15Preview?.attached||
      r15Preview.width<80||r15Preview.height<80||
      r15Preview.canvasWidth<80||r15Preview.canvasHeight<80||
