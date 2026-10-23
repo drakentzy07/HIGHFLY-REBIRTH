@@ -1,0 +1,412 @@
+# Combined Pages artifact: R11 public root reconstructed from immutable base; R12 at /fury-lab/.
+# R11 root binaries may NOT be changed by R12, and R12 offline character saves use separate keys.
+# New repository Settings > Pages > Source = GitHub Actions.
+name: HIGHFLY REBIRTH — R12 Optional FURY LAB (R11 SAFE ROOT)
+on:
+  push:
+    branches: [highfly-rebirth-r12-fury360-staging-20261023]
+    paths:
+      - ".github/workflows/rebirth-fury-lab-pages.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: rebirth-independent-pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: release
+          ref: 0c64f51fe2cfb79f92856989a9c4e1acc9e0e4d1
+          persist-credentials: false
+      - name: Only dedicated preview repository may deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY}" = "drakentzy07/HIGHFLY-REBIRTH"
+          test "${GITHUB_REF}" = "refs/heads/highfly-rebirth-r12-fury360-staging-20261023"
+      - name: Checkout audited R12 staging scripts (read only)
+        uses: actions/checkout@v4
+        with:
+          ref: cd8834a8ec23b2d5a145029c7de87f77ac468f1c
+          path: r12
+          persist-credentials: false
+      - name: Checkout immutable FURY engine F0 41/41 GREEN
+        uses: actions/checkout@v4
+        with:
+          repository: drakentzy07/cobalt-hollow-lab
+          ref: 64e94970c903aad6552930a68bd78673ca5c796f
+          path: fury-source
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /fury360/
+      - name: Checkout frozen HIGHFLY REBIRTH overlays
+        uses: actions/checkout@v4
+        with:
+          repository: drakentzy07/cobalt-hollow-lab
+          ref: f8a878c81b20c3ff0d54f18a0a77e3490a36f2d1
+          path: rebirth
+          filter: blob:none
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /rebirth-044/
+      - name: Checkout exact ClaudeCraft v0.44.7
+        uses: actions/checkout@v4
+        with:
+          repository: levy-street/world-of-claudecraft
+          ref: v0.44.7
+          path: candidate
+          filter: blob:none
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/
+            /scripts/
+            /server/
+            /headless/
+            /bot/
+            /data/
+            /patches/
+            /private/
+            /public/
+            /tests/
+            /electron/
+            /android/
+            /package.json
+            /pnpm-lock.yaml
+            /vite.config.ts
+            /tsconfig.json
+            /tsconfig.admin.json
+            /tsconfig.bot.json
+            /svelte.config.js
+            /.browserslistrc
+            /.npmrc
+            /biome.json
+            /.gitignore
+            /index.html
+            /admin.html
+            /guide.html
+            /editor.html
+            /play.html
+            /wallet-handoff.html
+            /capacitor.config.ts
+      - name: Checkout certified GOLDEN movement and Training donor
+        uses: actions/checkout@v4
+        with:
+          repository: drakentzy07/cobalt-hollow-lab
+          ref: highfly-origin-f263-collision-gesture-save-polish-20261020
+          path: legacy
+          filter: blob:none
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/game/input.ts
+            /src/game/mobile_controls.ts
+            /src/render/assets/media.ts
+            /src/sim/player_motion.ts
+            /src/highfly/combat/
+            /src/highfly/training/
+            /tests/highfly_training_core.test.ts
+            /tests/highfly_training_engine.test.ts
+            /tests/highfly_training_adaptation.test.ts
+            /tests/highfly_training_periodization.test.ts
+            /tests/highfly_training_bridge.test.ts
+      - name: Apply exact native REBIRTH R1–R6
+        run: |
+          set -euo pipefail
+          test "$(git -C candidate describe --tags --exact-match)" = v0.44.7
+          mkdir -p candidate/src/highfly/training candidate/src/highfly/rebirth
+          cp legacy/src/highfly/training/*.ts candidate/src/highfly/training/
+          cp rebirth/rebirth-044/r1/training_entry.ts candidate/src/highfly/rebirth/training_entry.ts
+          cp rebirth/rebirth-044/r1/training_style.css candidate/src/highfly/rebirth/training_style.css
+          cp rebirth/rebirth-044/r2/r2_style.css candidate/src/highfly/rebirth/r2_style.css
+          for part in r1 r2 r3 r4 r6; do
+            (cd candidate && node "../rebirth/rebirth-044/$part/apply_candidate.mjs")
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Resolve immutable dependencies and check game types
+        working-directory: candidate
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.5 --activate
+          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm exec tsc --noEmit --incremental false
+      - name: R7 fix original asset paths and HIGHFLY Spanish mobile entry
+        run: python3 release/scripts/highfly_rebirth_r7_mobile_pages.py source candidate
+      - name: R8 restore proven HIGHFLY hashed-media paths and native fullscreen branding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          donor=Path('legacy/src/render/assets/media.ts')
+          dst=Path('candidate/src/render/assets/media.ts')
+          assert donor.is_file(), 'R8_MISSING_CERTIFIED_MEDIA_DONOR'
+          s=donor.read_text()
+          assert 'import.meta.env.BASE_URL' in s and 'MEDIA_ASSETS[logical]' in s, 'R8_BAD_DONOR_MEDIA_RESOLVER'
+          dst.write_text(s)
+          print('R8_RESTORED_CERTIFIED_HIGHFLY_ASSET_URL=PASS')
+          html=Path('candidate/index.html')
+          page=html.read_text()
+          import re
+          page,num=re.subn(r'<img class="ls-logo" src="/worldofclaudecraft-logo.png"[^>]*>',
+            '<div class="ls-logo hf-r8-logo" role="img" aria-label="HIGHFLY REBIRTH">HIGHFLY REBIRTH</div>',
+            page,count=1)
+          assert num==1,'R8_CLAUDECRAFT_LOADING_LOGO_NOT_FOUND'
+          page=page.replace('<meta name="apple-mobile-web-app-title" content="ClaudeCraft" />',
+              '<meta name="apple-mobile-web-app-title" content="HIGHFLY REBIRTH" />')
+          page=page.replace('</head>', '''<style id="hf-r8-ui">
+          html.hf-r7 #loading-screen .hf-r8-logo{
+            display:block;width:auto!important;height:auto!important;max-width:96vw!important;
+            margin:0 auto 12px!important;color:#e9c474;font:900 clamp(24px,5vw,42px)/1.2 system-ui;
+            text-align:center;letter-spacing:.11em;text-shadow:0 3px 14px #000}
+          @media (orientation:landscape) and (max-height:540px){
+          html.hf-r7 #offline-select .auth-actions{display:grid!important;
+            grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+            width:100%!important;gap:8px!important;padding:6px 0!important}
+          html.hf-r7 #offline-select #btn-start-offline,
+          html.hf-r7 #offline-select #btn-offline-back{width:100%!important;
+            min-height:38px!important;min-width:0!important;position:relative!important;
+            font-size:clamp(11px,2.4vh,14px)!important;text-align:center!important;
+            padding:7px 4px!important;transform:none!important}}
+          </style></head>''')
+          html.write_text(page)
+          print('R8_REBIRTH_LOADING_BRAND_AND_S23_BUTTONS=PASS')
+          PY
+      - name: R9 enforce canonical source media routes before Vite
+        run: |
+          set -euo pipefail
+          python3 release/scripts/highfly_rebirth_r9_audit.py source candidate
+          (cd candidate && pnpm exec tsc --noEmit --incremental false)
+      - name: Build native ClaudeCraft plus REBIRTH
+        working-directory: candidate
+        env:
+          VITE_COBALT_OFFLINE: "1"
+          VITE_HIGHFLY_REBIRTH_PREVIEW: "1"
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          base='/HIGHFLY-REBIRTH'
+          prefix=('ui','audio','basis','fonts','claudium','guide-stills','highfly','map_art','map_bg')
+          roots=[*Path('src').rglob('*'),*(Path(x) for x in ('index.html','play.html','editor.html','admin.html','guide.html'))]
+          count=0
+          for p in roots:
+            if not p.is_file() or p.suffix.lower() not in ('.ts','.tsx','.js','.mjs','.css','.html'):continue
+            try:s=p.read_text()
+            except UnicodeDecodeError:continue
+            before=s
+            for k in prefix:
+              for marker in ('"', "'", '`','url(','url("',"url('"):
+                s=s.replace(marker+'/'+k+'/',marker+base+'/'+k+'/')
+            if s!=before:p.write_text(s);count+=1
+          print('REBIRTH_PUBLIC_RELATIVE_ASSETS_REWRITTEN',count)
+          PY
+          pnpm exec vite build --base=/HIGHFLY-REBIRTH/
+          # Native ClaudeCraft build: emit hashed /media assets AFTER Vite; otherwise GLB URLs 404.
+          node scripts/build_media_manifest.mjs emit
+          test -s dist/media/models/creatures/bull.a00c2c292526.glb
+          test -s dist/index.html
+          test -s dist/play.html
+          test -s dist/editor.html
+          test -s dist/manifest.webmanifest
+      - name: Isolate PWA identity and provide exact entry route
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          root=Path('candidate/dist')
+          manifest=root/'manifest.webmanifest'
+          data=json.loads(manifest.read_text())
+          data.update({'id':'/HIGHFLY-REBIRTH/','scope':'/HIGHFLY-REBIRTH/',
+                       'start_url':'/HIGHFLY-REBIRTH/?hfRebirth=1'})
+          manifest.write_text(json.dumps(data,indent=2)+'\n')
+          base='/HIGHFLY-REBIRTH'
+          static_roots=('ui','audio','basis','fonts','claudium','guide-stills','highfly','map_art','map_bg')
+          root_files=[p.name for p in Path('candidate/public').iterdir() if p.is_file()]
+          rewritten=0
+          for file in root.rglob('*'):
+            if not file.is_file() or file.suffix.lower() not in ('.html','.js','.css','.json','.webmanifest','.xml','.txt'):continue
+            try:contents=file.read_text()
+            except (UnicodeDecodeError,OSError):continue
+            orig=contents
+            for k in static_roots:
+              for pre in ('"', "'", '`','url(','url("',"url('"):
+                contents=contents.replace(pre+'/'+k+'/',pre+base+'/'+k+'/')
+            for k in root_files:
+              for pre in ('"', "'", '`','url(','url("',"url('"):
+                contents=contents.replace(pre+'/'+k,pre+base+'/'+k)
+            if contents!=orig:file.write_text(contents);rewritten+=1
+          print('REBIRTH_PAGES_STATIC_BASE_PATCH_FILES',rewritten)
+
+          index=(root/'index.html').read_text()
+          assert '/HIGHFLY-REBIRTH/assets/' in index,'INCORRECT_GITHUB_PAGES_ASSET_BASE'
+          (root/'rebirth-version.json').write_text(json.dumps({
+            'version':'REBIRTH-R11-entry-recovered','base':'ClaudeCraft-v0.44.7',
+            'classes':9,'training':True,'offline_save':'rebirth-only',
+            'HP_MP_EN':'level-one','S23_real_qa':'PENDING',
+            'root_main_cobalt':'NOT_MODIFIED'
+          },indent=2)+'\n')
+          (root/'.nojekyll').touch()
+          PY
+      - name: R7 certify model paths, responsive creator and offline entry
+        run: python3 release/scripts/highfly_rebirth_r7_mobile_pages.py dist candidate
+      - name: R8 certify REAL hashed-media GLBs (not just unhashed source files)
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re
+          root=Path('candidate')
+          dist=root/'dist'
+          table=(root/'src/render/assets/manifest.generated.ts').read_text()
+          mapping=dict(re.findall(r'"(models/[^"]+\.glb)"\s*:\s*"(/media/[^"]+\.glb)"',table))
+          assert len(mapping)>100, 'R8_MEDIA_MANIFEST_TOO_SMALL'
+          names=[
+             'models/chars/players/knight.glb',
+             'models/creatures/bull.glb',
+             'models/creatures/crab_ability_anims.glb',
+             'models/creatures/yeti.glb',
+             'models/chars/enemies/skeleton_rogue.glb',
+             'models/creatures/treant_ability_anims.glb']
+          checked={}
+          for name in names:
+             uri=mapping.get(name)
+             assert uri, 'R8_MISSING_GLB_MANIFEST '+name
+             f=dist/uri.lstrip('/')
+             assert f.is_file(), 'R8_MISSING_PUBLISHED_MEDIA '+str(f)
+             with f.open('rb') as handle: head=handle.read(12)
+             assert head[:4]==b'glTF', 'R8_NOT_GLTF '+name
+             assert len(head)==12 and int.from_bytes(head[8:12],'little')==f.stat().st_size, 'R8_BAD_GLTF_SIZE '+name
+             checked[name]='/HIGHFLY-REBIRTH'+uri
+          assert (dist/'basis').is_dir(), 'R8_MISSING_BASIS_TRANSCODER'
+          assert list((dist/'basis').glob('*transcoder*')), 'R8_MISSING_TRANSCODER_BINARY'
+          html=(dist/'index.html').read_text()
+          assert 'hf-r8-logo' in html and 'HIGHFLY REBIRTH' in html, 'R8_BRANDING_LOST'
+          bundle=list((dist/'assets').glob('*.js'))
+          assert bundle,'R8_NO_JS_BUNDLE'
+          report={'version':'REBIRTH-R8','mediaPaths':'certified HIGHFLY BASE_URL',
+            'verifiedGLBs':checked,'manifestGLBCount':len(mapping),'s23PhysicalQA':'PENDING',
+            'originalHIGHFLY':'UNCHANGED','nativeClasses':9}
+          (dist/'rebirth-r8-qa.json').write_text(json.dumps(report,indent=2)+'\n')
+          print('R8_REAL_HASHED_GLB_SMOKE_PASS',json.dumps(report))
+          PY
+      - name: R8 remove duplicate originals after validated hashed copies (native safe prune)
+        working-directory: candidate
+        run: |
+          node scripts/build_media_manifest.mjs prune
+          test -s dist/media/models/creatures/bull.a00c2c292526.glb
+      - name: R9 repair CSS HTML direct media routes and exhaustively audit all assets
+        run: |
+          set -euo pipefail
+          python3 release/scripts/highfly_rebirth_r9_audit.py dist candidate
+      - name: R9 install isolated Chromium browser smoke
+        working-directory: candidate
+        run: pnpm exec playwright install chromium
+      - name: R11 certified S23-sized native offline entry, GLB, world and save gate
+        working-directory: candidate
+        timeout-minutes: 12
+        run: |
+          cp ../release/scripts/highfly_rebirth_r9_browser.mjs scripts/highfly_rebirth_r9_browser.mjs
+          node scripts/highfly_rebirth_r9_browser.mjs
+      - name: Freeze byte-identical R11 root into immutable composite staging
+        run: |
+          set -euo pipefail
+          test -s candidate/dist/index.html
+          test -s candidate/dist/rebirth-version.json
+          mv candidate/dist site
+          test -s site/index.html
+          test -s site/media/models/creatures/bull.a00c2c292526.glb
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          root=Path('site')
+          manifest={}
+          for p in root.rglob('*'):
+            if p.is_file():
+              manifest[str(p.relative_to(root))]=hashlib.sha256(p.read_bytes()).hexdigest()
+          assert len(manifest)>500, len(manifest)
+          Path('r11-original-hashes.json').write_text(json.dumps(manifest, sort_keys=True))
+          print('R12_R11_PUBLIC_FILES_FROZEN',len(manifest))
+          PY
+      - name: Stage FURY modules DRY RUN before ANY additive application
+        run: |
+          set -euo pipefail
+          node fury-source/fury360/tools/stage_in_candidate.mjs --candidate candidate | tee fury-lab-dry-run.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('fury-lab-dry-run.json'))
+          assert r['mode']=='dry-run' and r['newFiles']==8 and r['protectedPathsModified']==0, r
+          print('FURY_LAB_DRY_RUN_UNTOUCHED_NATIVE=PASS')
+          PY
+      - name: Add only eight FURY portable modules, no alternate Sim
+        run: |
+          set -euo pipefail
+          node fury-source/fury360/tools/stage_in_candidate.mjs --candidate candidate --apply
+          node --experimental-strip-types --test fury-source/fury360/tests/*.test.ts
+      - name: Integrate R12 native HUD, independent GOLDEN camera and opt-in AoE
+        run: |
+          set -euo pipefail
+          python3 r12/scripts/highfly_rebirth_r12_hud.py candidate
+          python3 r12/scripts/highfly_rebirth_r12_camera.py candidate
+          python3 r12/scripts/highfly_rebirth_r12_aoe.py candidate
+          python3 r12/scripts/highfly_rebirth_r12_preview_pack.py source candidate
+          (cd candidate && pnpm exec tsc --noEmit --incremental false)
+      - name: Build playable FURY LAB under /HIGHFLY-REBIRTH/fury-lab/
+        working-directory: candidate
+        env:
+          VITE_COBALT_OFFLINE: "1"
+          VITE_HIGHFLY_REBIRTH_PREVIEW: "1"
+          VITE_HIGHFLY_FURY360: "1"
+        run: |
+          set -euo pipefail
+          pnpm exec vite build --base=/HIGHFLY-REBIRTH/fury-lab/
+          node scripts/build_media_manifest.mjs emit
+          test -s dist/media/models/creatures/bull.a00c2c292526.glb
+          node scripts/build_media_manifest.mjs prune
+          test -s dist/media/models/creatures/bull.a00c2c292526.glb
+      - name: Separate FURY-LAB PWA and offline character saves from R11
+        run: |
+          set -euo pipefail
+          python3 r12/scripts/highfly_rebirth_r12_preview_pack.py dist candidate
+          cp r12/scripts/highfly_rebirth_r9_browser.mjs candidate/scripts/highfly_rebirth_r9_browser.mjs
+          python3 r12/scripts/highfly_rebirth_r12_preview_pack.py browser candidate
+          test -s candidate/dist/fury-lab-version.json
+      - name: Browser certify R12 AoE + S23 touch controls and world entry on LAB base
+        working-directory: candidate
+        timeout-minutes: 12
+        run: node scripts/highfly_rebirth_r9_browser.mjs
+      - name: Compose R11 root and R12 lab, assert ALL root file bytes unchanged
+        run: |
+          set -euo pipefail
+          python3 r12/scripts/highfly_rebirth_r12_preview_pack.py assemble candidate
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path('site')
+          before=json.loads(Path('r11-original-hashes.json').read_text())
+          after={}
+          for p in root.rglob('*'):
+            if p.is_file() and 'fury-lab' not in p.relative_to(root).parts and p.name!='fury-lab-integrity.json':
+              after[str(p.relative_to(root))]=hashlib.sha256(p.read_bytes()).hexdigest()
+          assert before==after, 'FURY_PREVIEW_ALTERED_OR_REMOVED_R11_ROOT'
+          print('R11_ROOT_FILES_SHA256_BYTE_IDENTICAL',len(after))
+          print('FURY_LAB_PATH=HIGHFLY-REBIRTH/fury-lab/')
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Publish ONE composite R11 root + isolated R12 /fury-lab/ for S23 testing
+        id: deployment
+        uses: actions/deploy-pages@v4
+  # This workflow never modifies cobalt-hollow-lab, HIGHFLY-REBIRTH main, or R11 save keys.
