@@ -379,7 +379,7 @@ const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&hfFury=1&lang=es&gfx=low
    await reopen.locator('#offline-select .mini-class[data-class="warrior"]').click();
    await reopen.locator('#char-name').fill('RebirthTester');
    await reopen.locator('#btn-start-offline').click();
-   await reopen.waitForFunction(()=>!!window.__game?.sim?.player,{
+   await reopen.waitForFunction(()=>!!window.__game?.sim?.player,null,{
      timeout:90000,polling:250
    });
    const r13Loaded=await reopen.evaluate(()=>{

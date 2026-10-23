@@ -180,6 +180,25 @@ edit("src/main.ts", [
   }"""),
 ])
 
+
+# 3b. One physical Dash tap must not produce two native evade sequence edges.
+# Defensive dedupe in the existing input controller, not an alternate router.
+edit("src/game/input.ts", [
+    ("evade_window_field",
+     "  private highflyEvadeSeq = 0;",
+     "  private highflyEvadeSeq = 0;\n  private highflyLastEvadePressAt = -Infinity;"),
+    ("evade_edge_dedupe",
+     """  triggerHighflyEvade(): void {
+    this.highflyEvadeSeq += 1;
+  }""",
+     """  triggerHighflyEvade(): void {
+    const now=performance.now();
+    if(now-this.highflyLastEvadePressAt<180)return;
+    this.highflyLastEvadePressAt=now;
+    this.highflyEvadeSeq += 1;
+  }"""),
+])
+
 # 4. Runtime testable version stamp, no declaration of full Fury completion.
 version = root / "public" / "highfly-r13-status.json"
 version.write_text('{"version":"R13_RECOVERY_CANDIDATE","saveLevelCap":99,'

@@ -226,6 +226,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 release/scripts/highfly_rebirth_r13_recovery.py candidate
+          python3 release/scripts/highfly_rebirth_r13_aim.py candidate
           test -s candidate/public/highfly-r13-status.json
       - name: R12 typecheck staged FURY and native REBIRTH with no replacements
         working-directory: candidate
