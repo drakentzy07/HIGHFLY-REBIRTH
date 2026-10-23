@@ -344,6 +344,61 @@ const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&hfFury=1&lang=es&gfx=low
     !(saveReceipt.level>=1))
    throw Error('R9_NATIVE_SAVE_MISSING '+JSON.stringify(saveReceipt));
  console.log('R9_NATIVE_OFFLINE_SAVE_WRITTEN '+JSON.stringify(saveReceipt));
+
+ // R13 recovery gate: modify actual Sim state, write, emulate app process
+ // reopening in a fresh browser context, and resume the exact identity.
+ const r13Written=await page.evaluate(()=>{
+   const sim=window.__game.sim;
+   const meta=sim.players.get(sim.playerId);
+   if(!meta)throw Error('R13_MISSING_NATIVE_CHARACTER_META');
+   meta.xp+=173;
+   sim.player.pos.x+=0.85;
+   window.dispatchEvent(new Event('pagehide'));
+   const raw=localStorage.getItem('highfly.rebirth044.offline.r6:warrior:rebirthtester');
+   const slot=raw?JSON.parse(raw):null;
+   if(!slot?.character)throw Error('R13_SAVE_NOT_WRITTEN');
+   return {xp:slot.character.xp,level:slot.character.level,
+     x:slot.character.pos.x,z:slot.character.pos.z,
+     bag:JSON.stringify(slot.character.inventory),
+     equipment:JSON.stringify(slot.character.equipment)};
+ });
+ if(!(r13Written.xp>=173))throw Error('R13_XP_MUTATION_NOT_SAVED');
+ const coldStorage=await context.storageState();
+ // A NEW context has no Sim, touch ownership or cached active character.
+ const cold=await browser.newContext({
+   viewport:{width:932,height:430},isMobile:true,hasTouch:true,
+   userAgent:'Mozilla/5.0 (Linux; Android 16; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36',
+   deviceScaleFactor:1,serviceWorkers:'block',storageState:coldStorage
+ });
+ try{
+   const reopen=await cold.newPage();
+   reopen.setDefaultTimeout(40000);
+   await reopen.goto(url,{waitUntil:'load',timeout:60000});
+   await reopen.locator('#hf-r7-enter').click();
+   await reopen.locator('#offline-select').waitFor({state:'visible',timeout:40000});
+   await reopen.locator('#offline-select .mini-class[data-class="warrior"]').click();
+   await reopen.locator('#char-name').fill('RebirthTester');
+   await reopen.locator('#btn-start-offline').click();
+   await reopen.waitForFunction(()=>!!window.__game?.sim?.player,{
+     timeout:90000,polling:250
+   });
+   const r13Loaded=await reopen.evaluate(()=>{
+     const sim=window.__game.sim,state=sim.serializeCharacter(sim.playerId);
+     return {xp:state.xp,level:state.level,
+       x:state.pos.x,z:state.pos.z,
+       bag:JSON.stringify(state.inventory),
+       equipment:JSON.stringify(state.equipment)};
+   });
+   const closeEnough=Math.hypot(r13Loaded.x-r13Written.x,r13Loaded.z-r13Written.z)<2;
+   if(r13Loaded.xp!==r13Written.xp||
+      r13Loaded.level!==r13Written.level||
+      r13Loaded.bag!==r13Written.bag||
+      r13Loaded.equipment!==r13Written.equipment||!closeEnough){
+     throw Error('R13_COLD_REOPEN_MISMATCH '+JSON.stringify({before:r13Written,after:r13Loaded}));
+   }
+   console.log('R13_COLD_REOPEN_SAVE_XP_POSITION_INVENTORY_EQUIPMENT=PASS '+JSON.stringify(r13Loaded));
+ }finally{await cold.close();}
+
  if(failures.length)throw Error('R9_WORLD_ASSET_ERRORS '+failures.slice(0,12).join(' | '));
  const missingAssets=missing.filter(p=>/\.(glb|ktx2|wasm|woff2?|png|webp)(\?|$)/.test(p));
  if(missingAssets.length)throw Error('R9_WORLD_404_ASSETS '+missingAssets.slice(0,12).join(','));
