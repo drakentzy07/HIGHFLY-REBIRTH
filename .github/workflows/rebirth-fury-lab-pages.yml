@@ -34,7 +34,7 @@ jobs:
       - name: Checkout audited R12 staging scripts (read only)
         uses: actions/checkout@v4
         with:
-          ref: cd8834a8ec23b2d5a145029c7de87f77ac468f1c
+          ref: highfly-rebirth-r12-fury360-staging-20261023
           path: r12
           persist-credentials: false
       - name: Checkout immutable FURY engine F0 41/41 GREEN
@@ -374,7 +374,7 @@ jobs:
           test -s dist/media/models/creatures/bull.a00c2c292526.glb
           node scripts/build_media_manifest.mjs prune
           test -s dist/media/models/creatures/bull.a00c2c292526.glb
-      - name: Separate FURY-LAB PWA and offline character saves from R11
+      - name: Route FURY lab to its own base and saves with shared R11 GLBs
         run: |
           set -euo pipefail
           python3 r12/scripts/highfly_rebirth_r12_preview_pack.py dist candidate
