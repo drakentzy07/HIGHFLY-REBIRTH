@@ -33,6 +33,11 @@ test=r"""
  if(!closed)throw Error('R16_REAL_MORE_DIALOG_DID_NOT_CLOSE');
  console.log('R16_NATIVE_SINGLE_TOP_FRAME_AND_MORE_CLICK=PASS');
 """
-s=s.replace(anchor,anchor+"\n"+test,1)
+# Preserve R14's physical jump/attack order: opening a native modal before
+# a held touch sequence can steal/focus a pointer on Chromium Android.
+# Check R16 menu only AFTER every motion+save functional regression.
+end_anchor=" if(failures.length)throw Error('R9_WORLD_ASSET_ERRORS '"
+assert s.count(end_anchor)==1, "R16_END_TEST_ANCHOR_DRIFT "+str(s.count(end_anchor))
+s=s.replace(end_anchor,test+"\n"+end_anchor,1)
 p.write_text(s,encoding="utf-8")
 print("R16_S23_ORIGINAL_MORE_AND_SINGLE_FRAME_BROWSER_ASSERTIONS_INSTALLED")
