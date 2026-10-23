@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/rebirth-fury360-staging.yml"
       - "scripts/highfly_rebirth_r12_hud.py"
+      - "scripts/highfly_rebirth_r12_aoe.py"
       - "scripts/highfly_rebirth_r9_browser.mjs"
       - "scripts/highfly_rebirth_r12_smoke.mjs"
       - "scripts/highfly_rebirth_r9_audit.py"
@@ -213,6 +214,10 @@ jobs:
         run: |
           set -euo pipefail
           python3 release/scripts/highfly_rebirth_r12_hud.py candidate
+      - name: R12 opt-in FURY native circle overlay; original skill execution retained
+        run: |
+          set -euo pipefail
+          python3 release/scripts/highfly_rebirth_r12_aoe.py candidate
       - name: R12 typecheck staged FURY and native REBIRTH with no replacements
         working-directory: candidate
         run: pnpm exec tsc --noEmit --incremental false
@@ -221,6 +226,7 @@ jobs:
         env:
           VITE_COBALT_OFFLINE: "1"
           VITE_HIGHFLY_REBIRTH_PREVIEW: "1"
+          VITE_HIGHFLY_FURY360: "1"
         run: |
           set -euo pipefail
           python3 - <<'PY'
