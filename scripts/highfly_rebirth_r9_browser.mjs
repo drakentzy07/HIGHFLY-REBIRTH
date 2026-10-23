@@ -218,6 +218,26 @@ const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&hfFury=1&lang=es&gfx=low
    throw Error('R12_NATIVE_FURY_AOE_RENDERER_BRIDGE_FAILURE '+JSON.stringify(nativeAoE));
  // R12 S23 layout contract: five actual native controls, in requested order.
  // Passive opens the NATIVE spellbook; Dash is original R2 input onEvade.
+ // The original v0.44.7 first-entry spawn cinematic deliberately hides
+ // #mobile-controls using INLINE style display:none after game.__game exists.
+ // Exercise the REAL Escape-to-skip affordance before testing gameplay input.
+ const introGuard=await page.evaluate(()=>{
+   const el=document.getElementById('mobile-controls');
+   return {inlineDisplay:el?.style.display,
+     computedDisplay:el?getComputedStyle(el).display:null,
+     loading:document.getElementById('loading-screen')?.className};
+ });
+ console.log('R12_INTRO_HUD_VISIBILITY_BEFORE_SKIP '+JSON.stringify(introGuard));
+ if(introGuard.inlineDisplay==='none'){
+   await page.keyboard.press('Escape');
+   await page.waitForFunction(()=>{
+     const el=document.getElementById('mobile-controls');
+     return el && el.style.display!== 'none' &&
+        getComputedStyle(el).display!=='none' &&
+        el.getBoundingClientRect().width>100;
+   },null,{timeout:20000,polling:150});
+ }
+ console.log('R12_NATIVE_SPAWN_INTRO_RESOLVED=PASS');
  const mobileMode=await page.evaluate(()=>{
    const names=['mobile-controls','mobile-action-ring','mobile-move-zone','mobile-move-joystick'];
    const state={ua:navigator.userAgent,body:document.body.className,
