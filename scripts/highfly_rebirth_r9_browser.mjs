@@ -88,7 +88,7 @@ try{
  });
  // Low is the official source game's graphics-tier smoke for headless
 // SwiftShader; full quality on S23 is checked separately, not inferred.
-const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&lang=es&gfx=low';
+const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&hfFury=1&lang=es&gfx=low';
  await page.goto(url,{waitUntil:'load',timeout:60000});
  await page.locator('#hf-r7-enter').click();
  await page.locator('#offline-select').waitFor({state:'visible',timeout:40000});
@@ -194,6 +194,27 @@ const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&lang=es&gfx=low';
    await captureWorldForensics(err?.message||'WORLD_TIMEOUT');
    throw new Error('R9_WORLD_FAILED_SEE_FORENSICS: '+String(err?.message||err));
  }
+ // R12 first FURY bridge: verifies native renderer owns ONE opt-in area
+ // preview. No skill is cast and no resource/ability authority is touched.
+ const nativeAoE=await page.evaluate(()=>{
+   const g=window.__game,r=g.renderer,p=g.sim.player;
+   const target={x:p.pos.x+2,z:p.pos.z+1,radius:2.75,
+      school:'fire',dimmed:false,blocked:false};
+   r.setGroundAimReticle(target);
+   const overlay=r.furyGroundOverlay;
+   const geometry=overlay?.buffers;
+   const displayed=!!geometry?.fill?.object?.visible &&
+     !!geometry?.outline?.object?.visible;
+   const vertices=geometry?.fill?.geometry?.drawRange?.count??null;
+   r.setGroundAimReticle(null);
+   const cleared=!!geometry && !geometry.fill.object.visible &&
+      !geometry.outline.object.visible;
+   return {enabled:!!overlay,displayed,cleared,vertices,radius:target.radius};
+ });
+ console.log('R12_NATIVE_FURY_AOE_OVERLAY_MEASURE '+JSON.stringify(nativeAoE));
+ if(!nativeAoE.enabled||!nativeAoE.displayed||!nativeAoE.cleared||
+    nativeAoE.vertices<3)
+   throw Error('R12_NATIVE_FURY_AOE_RENDERER_BRIDGE_FAILURE '+JSON.stringify(nativeAoE));
  // R12 S23 layout contract: five actual native controls, in requested order.
  // Passive opens the NATIVE spellbook; Dash is original R2 input onEvade.
  const mobileHud=await page.evaluate(()=>{
