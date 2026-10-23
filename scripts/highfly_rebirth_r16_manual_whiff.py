@@ -42,12 +42,19 @@ edit("src/main.ts",
 """      const attempted = offlineSim.highflyManualAttack(best);
       if (attempted) {
         // Native attempt ≠ guaranteed hit; Rogue class combo POINTS stay native.""",
-"""      const attempted = offlineSim.highflyManualAttack(best);
+"""      let attempted = offlineSim.highflyManualAttack(best);
+      let swungAtAir = best === null;
+      // The nearest enemy may be 10-40m away: failing its native range/LoS
+      // must NOT swallow a manual button press. Attempt a legitimate WHIFF
+      // with native weapon recovery instead, without moving or harming them.
+      if (!attempted && best !== null && offlineSim.player.swingTimer <= 0) {
+        attempted = offlineSim.highflyManualAttack(null);
+        swungAtAir = attempted;
+      }
       if (attempted) {
-        // The empty-air swing has NO native hit event; animate the same owned
-        // CharacterVisual. Real contacts are already animated by native events.
-        // This never submits damage, a projectile, resource debit or target.
-        if (best === null) renderer.triggerAttack(p.id);
+        // No native hit event for a whiff: play one existing GLB swing.
+        // Target contacts still rely exclusively on real Sim events.
+        if (swungAtAir) renderer.triggerAttack(p.id);
         // Native attempt ≠ guaranteed hit; Rogue class combo POINTS stay native.""")
 
 status=root/"public/highfly-r16-status.json"
