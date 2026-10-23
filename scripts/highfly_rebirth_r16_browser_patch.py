@@ -46,5 +46,35 @@ s=s.replace(creator_anchor,creator_anchor+"\n  writeFileSync(join(DIAG,'r16-s23-
 open_anchor=" await page.locator('#mobile-more').click();"
 assert s.count(open_anchor)==1,"R16_MENU_OPEN_TEST_DRIFT"
 s=s.replace(open_anchor," await page.screenshot({path:join(DIAG,'r16-s23-world-hud.png'),fullPage:false});\n"+open_anchor,1)
+# R16 lab-only: capture authoritative Sim/input state whenever
+# Chromium misses the first real jump edge observation. Never spoof a jump.
+jumpwait=""" await page.waitForFunction(()=>{
+   const p=window.__game.sim.player;
+   return p.highflyLastJumpSeq===1 && !p.onGround && p.jumping &&
+          p.highflyAirJumpUsed!==true;
+ },null,{timeout:2500,polling:25});"""
+assert s.count(jumpwait)==1,"R16_JUMP_FIRST_CONTRACT_DRIFT "+str(s.count(jumpwait))
+diagnosed=""" try {
+ await page.waitForFunction(()=>{
+   const p=window.__game.sim.player;
+   return p.highflyLastJumpSeq===1 && !p.onGround && p.jumping &&
+          p.highflyAirJumpUsed!==true;
+ },null,{timeout:4500,polling:25});
+ } catch(jumpError) {
+   const state=await page.evaluate(()=>{
+     const p=window.__game?.sim?.player,i=window.__game?.input;
+     return {onGround:p?.onGround,jumping:p?.jumping,
+       vy:p?.vy,used:p?.highflyAirJumpUsed,
+       inputJumpSeq:i?.highflyJumpSeq,consumedSeq:p?.highflyLastJumpSeq,
+       rooted:p?.rooted,stamina:p?.stamina,energy:p?.highflyVitals?.energy,
+       highflyFreedom:p?.highflyF25CombatFreedom,
+       bodyClasses:document.body.className,
+       targetAtJump:document.elementFromPoint(640,386)?.id??null};
+   });
+   console.error('R16_FIRST_JUMP_RUNTIME_FORENSICS '+JSON.stringify(state));
+   await page.screenshot({path:join(DIAG,'r16-first-jump-failure.png')});
+   throw jumpError;
+ }"""
+s=s.replace(jumpwait,diagnosed,1)
 p.write_text(s,encoding="utf-8")
 print("R16_S23_ORIGINAL_MORE_AND_SINGLE_FRAME_BROWSER_ASSERTIONS_INSTALLED")
