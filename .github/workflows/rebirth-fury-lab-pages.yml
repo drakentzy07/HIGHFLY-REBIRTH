@@ -374,9 +374,10 @@ jobs:
           test -s dist/media/models/creatures/bull.a00c2c292526.glb
           node scripts/build_media_manifest.mjs prune
           test -s dist/media/models/creatures/bull.a00c2c292526.glb
-      - name: Route FURY lab to its own base and saves with shared R11 GLBs
+      - name: Route FURY lab CSS/HTML via 1838 hashed R11 assets and isolate saves
         run: |
           set -euo pipefail
+          python3 -m py_compile r12/scripts/highfly_rebirth_r12_preview_pack.py
           python3 r12/scripts/highfly_rebirth_r12_preview_pack.py dist candidate
           cp r12/scripts/highfly_rebirth_r9_browser.mjs candidate/scripts/highfly_rebirth_r9_browser.mjs
           python3 r12/scripts/highfly_rebirth_r12_preview_pack.py browser candidate
