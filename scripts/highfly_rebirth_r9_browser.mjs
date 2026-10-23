@@ -58,6 +58,7 @@ try{
  });
  const context=await browser.newContext({
    viewport:{width:932,height:430},isMobile:true,hasTouch:true,
+   userAgent:'Mozilla/5.0 (Linux; Android 16; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36',
    deviceScaleFactor:1,serviceWorkers:'block'
  });
  const page=await context.newPage();
@@ -217,6 +218,25 @@ const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&hfFury=1&lang=es&gfx=low
    throw Error('R12_NATIVE_FURY_AOE_RENDERER_BRIDGE_FAILURE '+JSON.stringify(nativeAoE));
  // R12 S23 layout contract: five actual native controls, in requested order.
  // Passive opens the NATIVE spellbook; Dash is original R2 input onEvade.
+ const mobileMode=await page.evaluate(()=>{
+   const names=['mobile-controls','mobile-action-ring','mobile-move-zone','mobile-move-joystick'];
+   const state={ua:navigator.userAgent,body:document.body.className,
+     coarse:matchMedia('(pointer:coarse)').matches,
+     touch:navigator.maxTouchPoints,
+     classes:[...document.documentElement.classList]};
+   for(const name of names){
+     const e=document.getElementById(name);
+     const r=e?.getBoundingClientRect(),css=e?getComputedStyle(e):null;
+     state[name]={present:!!e,display:css?.display,visibility:css?.visibility,
+       width:r?.width,height:r?.height,ancestor:e?.parentElement?.id};
+   }
+   return state;
+ });
+ console.log('R12_S23_TOUCH_MODE_DIAGNOSTIC '+JSON.stringify(mobileMode));
+ if(!mobileMode['mobile-controls']?.width ||
+    !mobileMode['mobile-action-ring']?.width){
+   throw Error('R12_MOBILE_MODE_NOT_INITIALIZED '+JSON.stringify(mobileMode));
+ }
  const mobileHud=await page.evaluate(()=>{
    const specs=[
      ['passive','#hf-r12-passive'],['jump','#mobile-jump'],
