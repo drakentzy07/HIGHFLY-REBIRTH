@@ -375,10 +375,10 @@ jobs:
           python3 ../release/scripts/highfly_rebirth_r16_browser_patch.py scripts/highfly_rebirth_r9_browser.mjs
           node scripts/highfly_rebirth_r9_browser.mjs
       - name: Preserve actual S23 Chromium failure screenshot and requests
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: highfly-rebirth-r9-browser-forensics
+          name: highfly-r16-s23-creator-hud-visual-evidence
           path: candidate/.run-diagnostics/
           if-no-files-found: ignore
           retention-days: 7
