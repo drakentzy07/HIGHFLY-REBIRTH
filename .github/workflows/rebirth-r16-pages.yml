@@ -7,13 +7,6 @@ on:
     branches: [highfly-rebirth-r16-s23-hud-creator-combat-20261023]
     paths:
       - ".github/workflows/rebirth-r16-pages.yml"
-      - "scripts/highfly_rebirth_r16_visual.py"
-      - "scripts/highfly_rebirth_r16_progression.py"
-      - "scripts/highfly_rebirth_r16_lab_keys.py"
-      - "scripts/highfly_rebirth_r16_policy.test.mjs"
-      - "scripts/highfly_rebirth_r16_browser_patch.py"
-      - "scripts/highfly_rebirth_r14_freedom.py"
-      - "scripts/highfly_rebirth_r14_integral_browser_patch.py"
   workflow_dispatch:
 permissions:
   contents: read
@@ -373,6 +366,7 @@ jobs:
           python3 r16/scripts/highfly_rebirth_r15.py candidate
           python3 r16/scripts/highfly_rebirth_r16_visual.py candidate
           python3 r16/scripts/highfly_rebirth_r16_progression.py candidate
+          python3 r16/scripts/highfly_rebirth_r16_manual_whiff.py candidate
           python3 r16/scripts/highfly_rebirth_r16_lab_keys.py candidate
           cp r16/scripts/highfly_rebirth_r16_policy.test.mjs candidate/scripts/highfly_rebirth_r16_policy.test.mjs
           (cd candidate && node --experimental-strip-types --test scripts/highfly_rebirth_r16_policy.test.mjs)
