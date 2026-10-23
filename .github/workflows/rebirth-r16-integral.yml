@@ -12,6 +12,7 @@ on:
       - "scripts/highfly_rebirth_r15.py"
       - "scripts/highfly_rebirth_r16_visual.py"
       - "scripts/highfly_rebirth_r16_progression.py"
+      - "scripts/highfly_rebirth_r16_manual_whiff.py"
       - "scripts/highfly_rebirth_r16_policy.test.mjs"
       - "scripts/highfly_rebirth_r16_browser_patch.py"
       - "scripts/highfly_rebirth_r13_recovery.py"
@@ -239,6 +240,7 @@ jobs:
           python3 release/scripts/highfly_rebirth_r15.py candidate
           python3 release/scripts/highfly_rebirth_r16_visual.py candidate
           python3 release/scripts/highfly_rebirth_r16_progression.py candidate
+          python3 release/scripts/highfly_rebirth_r16_manual_whiff.py candidate
           cp release/scripts/highfly_rebirth_r16_policy.test.mjs candidate/scripts/highfly_rebirth_r16_policy.test.mjs
           (cd candidate && node --experimental-strip-types --test scripts/highfly_rebirth_r16_policy.test.mjs)
           test -s candidate/public/highfly-r13-status.json
