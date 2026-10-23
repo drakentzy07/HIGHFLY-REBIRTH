@@ -374,7 +374,7 @@ jobs:
           test -s dist/media/models/creatures/bull.a00c2c292526.glb
           node scripts/build_media_manifest.mjs prune
           test -s dist/media/models/creatures/bull.a00c2c292526.glb
-      - name: Route FURY lab CSS/HTML via 1838 hashed R11 assets and isolate saves
+      - name: Route FURY lab raw CSS/HTML via 1838 hashes (ignore already-versioned URLs)
         run: |
           set -euo pipefail
           python3 -m py_compile r12/scripts/highfly_rebirth_r12_preview_pack.py
