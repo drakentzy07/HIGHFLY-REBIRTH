@@ -81,7 +81,14 @@ elif mode=="dist":
     if not match:raise RuntimeError("R12_MEDIA_MANIFEST_FORMAT_DRIFT")
     catalogue=json.loads(match.group(1))
     if len(catalogue)<1800:raise RuntimeError("R12_MEDIA_MANIFEST_TOO_SMALL "+str(len(catalogue)))
-    direct=re.compile(r'(?P<root>/HIGHFLY-REBIRTH/fury-lab/|/HIGHFLY-REBIRTH/|/)(?P<logical>(?:models|textures|env|vfx)/[A-Za-z0-9_./-]+)')
+    # Anchored to an actual URL token boundary. Without the lookbehind the
+    # regex falsely identifies /env/ *inside* the already correct /media/env/
+    # SHA map embedded in index.html and aborts every build.
+    direct=re.compile(r'(?<![A-Za-z0-9_])(?P<root>/HIGHFLY-REBIRTH/fury-lab/|/HIGHFLY-REBIRTH/|/)(?P<logical>(?:models|textures|env|vfx)/[A-Za-z0-9_./-]+)')
+    assert not direct.search('/media/env/amber_sunset_1k.1b495e2b31b8.hdr')
+    assert not direct.search('/HIGHFLY-REBIRTH/media/env/amber_sunset_1k.1b495e2b31b8.hdr')
+    assert direct.search('url(/HIGHFLY-REBIRTH/fury-lab/textures/loading/eastbrook-square.webp)')
+    print('R12_MEDIA_REGEX_FALSE_POSITIVE_GUARD_PASS')
     resolved_count=0
     unresolved=[]
     for p in dist.rglob("*"):
