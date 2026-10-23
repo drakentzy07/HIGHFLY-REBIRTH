@@ -25,9 +25,11 @@ def edit(path, replacements):
 
 # 1. Save recovery. KEEP namespace isolation: R12 lab cannot overwrite R11.
 save = "src/highfly/rebirth/offline_save.ts"
+# Preserve vanilla ClaudeCraft v0.44.7 progression (levels 1..20).
+# A future extended progression requires a separate explicit feature.
+if (root / save).read_text(encoding="utf-8").count("s.level<=20&&Number.isFinite(s.xp)") != 1:
+    raise AssertionError("R13_NATIVE_LEVEL_20_CAP_DRIFT")
 edit(save, [
-    ("level_99", "s.level<=20&&Number.isFinite(s.xp)",
-      "s.level<=99&&Number.isFinite(s.xp)"),
     ("safe_load",
      "const s:unknown=JSON.parse(raw);return validSlot(s,cls,name)?s:null;\n }catch{return null}",
      """const s:unknown=JSON.parse(raw);
@@ -201,7 +203,7 @@ edit("src/game/input.ts", [
 
 # 4. Runtime testable version stamp, no declaration of full Fury completion.
 version = root / "public" / "highfly-r13-status.json"
-version.write_text('{"version":"R13_RECOVERY_CANDIDATE","saveLevelCap":99,'
+version.write_text('{"version":"R13_RECOVERY_CANDIDATE","saveLevelCap":20,'
                    '"r11SaveNamespacePreserved":true,"manualNativeBasicAttack":true,'
                    '"physicalFourClipComboComplete":false,'
                    '"dragSkillIntegrated":false,"androidVerified":false}\n',
