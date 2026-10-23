@@ -42,7 +42,7 @@ s=s.replace(end_anchor,test+"\n"+end_anchor,1)
 # Retain actual S23-sized creator pixels and HUD screenshots for human QA.
 creator_anchor="  const png=await page.locator('#offline-preview-container').screenshot({type:'png'});"
 assert s.count(creator_anchor)==1,"R16_CREATOR_PNG_TEST_DRIFT"
-s=s.replace(creator_anchor,creator_anchor+"\\n  writeFileSync(join(DIAG,'r16-s23-creator.png'),png);",1)
+s=s.replace(creator_anchor,creator_anchor+"\n  writeFileSync(join(DIAG,'r16-s23-creator.png'),png);",1)
 open_anchor=" await page.locator('#mobile-more').click();"
 assert s.count(open_anchor)==1,"R16_MENU_OPEN_TEST_DRIFT"
 s=s.replace(open_anchor," await page.screenshot({path:join(DIAG,'r16-s23-world-hud.png'),fullPage:false});\\n"+open_anchor,1)
