@@ -194,6 +194,78 @@ const url='http://127.0.0.1:4187'+PREFIX+'/?hfRebirth=1&lang=es&gfx=low';
    await captureWorldForensics(err?.message||'WORLD_TIMEOUT');
    throw new Error('R9_WORLD_FAILED_SEE_FORENSICS: '+String(err?.message||err));
  }
+ // R12 S23 layout contract: five actual native controls, in requested order.
+ // Passive opens the NATIVE spellbook; Dash is original R2 input onEvade.
+ const mobileHud=await page.evaluate(()=>{
+   const specs=[
+     ['passive','#hf-r12-passive'],['jump','#mobile-jump'],
+     ['dash','#mobile-evade'],
+     ['skill1','#mobile-action-ring .mobile-action-slot[data-mobile-index="0"]'],
+     ['use','#mobile-interact']];
+   return specs.map(([id,selector])=>{
+     const el=document.querySelector(selector);
+     if(!el)return {id,missing:true};
+     const r=el.getBoundingClientRect(),style=getComputedStyle(el);
+     const cx=r.left+r.width/2,cy=r.top+r.height/2;
+     const at=document.elementFromPoint(cx,cy);
+     return {id,cx,cy,width:r.width,height:r.height,display:style.display,
+       hit:at?.id||at?.closest('button')?.id||null};
+   });
+ });
+ console.log('R12_S23_HUD_GEOMETRY '+JSON.stringify(mobileHud));
+ if(mobileHud.some(x=>x.missing||x.display==='none'||x.width<32||x.height<32))
+   throw Error('R12_MISSING_OR_TOO_SMALL_HUD_BUTTON '+JSON.stringify(mobileHud));
+ for(let k=1;k<mobileHud.length;k++){
+   const previous=mobileHud[k-1],current=mobileHud[k];
+   if(current.cx<previous.cx+(previous.width+current.width)/2+3)
+     throw Error('R12_HUD_TOUCH_OVERLAP_OR_BAD_ORDER '+JSON.stringify(mobileHud));
+ }
+ // Exercise the REAL multi-touch router through Chromium CDP. Synthetic DOM
+ // dispatchEvent does not create pointer capture and can lie about joystick.
+ const cdp=await context.newCDPSession(page);
+ const origin=await page.evaluate(()=>{
+   const el=document.getElementById('mobile-move-joystick');
+   const r=el?.getBoundingClientRect();
+   const zone=document.getElementById('mobile-move-zone')?.getBoundingClientRect();
+   const center=r?{x:r.left+r.width/2,y:r.top+r.height/2}:null;
+   return {center,zone:zone?{x:zone.x,y:zone.y,width:zone.width,height:zone.height}:null};
+ });
+ if(!origin.center)throw Error('R12_MOVE_WHEEL_MISSING');
+ const initial=await page.evaluate(()=>{
+   const g=window.__game,p=g.sim.player;
+   return {x:p.pos.x,z:p.pos.z,yaw:g.input.camYaw,
+     highfly:typeof g.input.highflyTouchVector==='function'?g.input.highflyTouchVector():null};
+ });
+ const x=origin.center.x,y=origin.center.y;
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:7}]});
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-46,id:7}]});
+ await page.waitForTimeout(1000);
+ const moved=await page.evaluate(()=>{
+   const g=window.__game,p=g.sim.player;
+   return {x:p.pos.x,z:p.pos.z,yaw:g.input.camYaw,
+     highfly:typeof g.input.highflyTouchVector==='function'?g.input.highflyTouchVector():null};
+ });
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ const distance=Math.hypot(moved.x-initial.x,moved.z-initial.z);
+ const cameraChange=Math.abs(moved.yaw-initial.yaw);
+ console.log('R12_REAL_TOUCH_JOYSTICK_MEASURE '+JSON.stringify({
+   origin,initial,moved,distance,cameraChange}));
+ if(distance<0.15||cameraChange>0.18){
+   await page.screenshot({path:join(DIAG,'r12-joystick-failure.png'),fullPage:true}).catch(()=>{});
+   throw Error('R12_STICK_STEERS_CAMERA_NOT_PLAYER '+JSON.stringify({distance,cameraChange,origin,initial,moved}));
+ }
+ // Native Dash button should feed exactly one HIGHFLY evade input edge,
+ // not move the player client-side or spawn a new control owner.
+ const dash=mobileHud.find(x=>x.id==='dash');
+ const dashBefore=await page.evaluate(()=>window.__game.input.highflyEvadeSeq);
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:dash.cx,y:dash.cy,id:8}]});
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ await page.waitForTimeout(100);
+ const dashAfter=await page.evaluate(()=>window.__game.input.highflyEvadeSeq);
+ console.log('R12_NATIVE_DASH_EDGE '+JSON.stringify({dashBefore,dashAfter}));
+ if(typeof dashBefore!=='number'||dashAfter!==dashBefore+1)
+   throw Error('R12_DASH_BUTTON_NOT_BOUND_TO_NATIVE_EVADE');
+ console.log('R12_S23_NATIVE_HUD_JOYSTICK_DASH_SMOKE_PASS');
  // R6 save is isolated by class + lowercased name. Trigger the actual
  // pagehide listener and prove persistence without deleting any user data.
  const saveReceipt=await page.evaluate(()=>{
