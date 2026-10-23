@@ -9,6 +9,7 @@ import hashlib
 import json
 import sys
 import shutil
+import re
 root=Path.cwd()
 mode=sys.argv[1]
 candidate=Path(sys.argv[2]) if len(sys.argv)>2 else root/"candidate"
@@ -21,7 +22,12 @@ extensions={".ts",".tsx",".js",".mjs",".css",".html",".json",".webmanifest",".xm
 def rewrite(path:Path):
     try: old=path.read_text(encoding="utf-8")
     except (UnicodeDecodeError,OSError):return False
-    new=old.replace(base,lab)
+    # The input may ALREADY contain the lab prefix from Vite --base.
+    # Plain str.replace doubled it (/fury-lab/fury-lab/assets/), which is
+    # exactly what broke RUN #1. Preserve existing scoped paths.
+    new=re.sub(re.escape(base)+r'(?!fury-lab/)',lab,old)
+    if lab+'fury-lab/' in new:
+        raise RuntimeError('R12_DOUBLE_LAB_BASE '+str(path))
     if new!=old:
         path.write_text(new,encoding="utf-8")
         return True
@@ -59,6 +65,28 @@ elif mode=="dist":
     data.update({"id":lab,"scope":lab,"start_url":lab+"?hfRebirth=1&hfFury=1&lang=es",
       "name":"HIGHFLY REBIRTH — FURY 360 LAB","short_name":"FURY LAB"})
     manifest.write_text(json.dumps(data,indent=2)+"\n")
+    # Both apps share IDENTICAL v0.44.7 hashed media assets. Keep one copy
+    # at the protected R11 root and route FURY media there at runtime.
+    # The R11 catalogue hashes are validated by its own complete audit.
+    media=dist/"media"
+    if not media.is_dir():
+        raise RuntimeError("R12_LAB_MEDIA_NOT_EMITTED")
+    media_files=sum(1 for x in media.rglob("*") if x.is_file())
+    if media_files<1800:
+        raise RuntimeError("R12_LAB_MEDIA_COUNT_INVALID "+str(media_files))
+    # All bundled file URLs that would target /fury-lab/media/ are served from
+    # the original root /media/ to avoid publishing >1GB of duplicated GLBs.
+    relocated=0
+    for p in dist.rglob("*"):
+        if not p.is_file() or p.suffix.lower() not in extensions:continue
+        try: before=p.read_text()
+        except (UnicodeDecodeError,OSError):continue
+        after=before.replace(lab+"media/",base+"media/")
+        if after!=before:
+            p.write_text(after)
+            relocated+=1
+    shutil.rmtree(media)
+    print("R12_LAB_SHARED_R11_MEDIA_NO_DUPLICATION",media_files,relocated)
     (dist/".nojekyll").touch()
     (dist/"fury-lab-version.json").write_text(json.dumps({
       "version":"REBIRTH-R12-FURY360-STAGING",
@@ -74,7 +102,8 @@ elif mode=="dist":
     },indent=2)+"\n")
     app=(dist/"index.html").read_text()
     assert lab+"assets/" in app,"R12_PREVIEW_BAD_JS_BASE"
-    assert (dist/"media/models/creatures/bull.a00c2c292526.glb").is_file(),"R12_PREVIEW_GLB_NOT_EMITTED"
+    assert not (dist/"media").exists(),"R12_PREVIEW_MEDIA_DUPLICATED"
+    assert base+"media/" in "".join(p.read_text(errors="ignore") for p in dist.glob("assets/*.js")),"R12_PREVIEW_ROOT_MEDIA_ALIAS_MISSING"
     assert save_lab in "".join(p.read_text(errors="ignore") for p in dist.glob("assets/*.js")),"R12_PREVIEW_SAVE_NOT_ISOLATED"
     print("R12_FURY_LAB_BUILD_ISOLATED",files)
 elif mode=="assemble":
@@ -89,6 +118,8 @@ elif mode=="assemble":
     after=tree_hash(site)
     assert before==after,"R12_PRODUCTION_R11_BYTES_MUTATED"
     assert (site/"index.html").is_file() and (labdir/"index.html").is_file()
+    assert not (labdir/"media").exists(),"R12_SHARED_MEDIA_DUPLICATED"
+    assert (site/"media/models/creatures/bull.a00c2c292526.glb").is_file(),"R12_R11_SHARED_MEDIA_MISSING"
     assert (site/"rebirth-version.json").is_file() and (labdir/"fury-lab-version.json").is_file()
     (site/"fury-lab-integrity.json").write_text(json.dumps({
       "main_files_preserved":len(before),
