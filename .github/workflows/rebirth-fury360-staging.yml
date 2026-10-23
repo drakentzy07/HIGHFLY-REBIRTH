@@ -208,6 +208,10 @@ jobs:
           set -euo pipefail
           python3 release/scripts/highfly_rebirth_r9_audit.py source candidate
           (cd candidate && pnpm exec tsc --noEmit --incremental false)
+      - name: R12 integrate native S23 HUD positions and existing spellbook callback
+        run: |
+          set -euo pipefail
+          python3 release/scripts/highfly_rebirth_r12_hud.py candidate
       - name: R12 typecheck staged FURY and native REBIRTH with no replacements
         working-directory: candidate
         run: pnpm exec tsc --noEmit --incremental false
