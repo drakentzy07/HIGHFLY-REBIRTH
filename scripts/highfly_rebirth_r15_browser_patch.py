@@ -9,9 +9,9 @@ def once(label,anchor,update):
  s=s.replace(anchor,update,1)
 once('spatialHUD',
  """ for(let k=1;k<mobileHud.length;k++){
-    const previous=mobileHud[k-1],current=mobileHud[k];
-    if(current.cx<previous.cx+(previous.width+current.width)/2+3)
-      throw Error('R12_HUD_TOUCH_OVERLAP_OR_BAD_ORDER '+JSON.stringify(mobileHud));
+   const previous=mobileHud[k-1],current=mobileHud[k];
+   if(current.cx<previous.cx+(previous.width+current.width)/2+3)
+     throw Error('R12_HUD_TOUCH_OVERLAP_OR_BAD_ORDER '+JSON.stringify(mobileHud));
  }""",
  """  // R15 uses an arc, not the obsolete R12 straight row. Check ACTUAL
   // two-dimensional hit regions, including the same zero-size guard above.
