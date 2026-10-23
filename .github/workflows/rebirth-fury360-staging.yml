@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/rebirth-fury360-staging.yml"
       - "scripts/highfly_rebirth_r12_hud.py"
+      - "scripts/highfly_rebirth_r9_browser.mjs"
       - "scripts/highfly_rebirth_r12_smoke.mjs"
       - "scripts/highfly_rebirth_r9_audit.py"
       - "scripts/highfly_rebirth_r9_browser.mjs"
@@ -339,7 +340,7 @@ jobs:
       - name: R9 install isolated Chromium browser smoke
         working-directory: candidate
         run: pnpm exec playwright install chromium
-      - name: R9 S23 native canvas mount, GLB loads, creator touch and world entry gate
+      - name: R12 certify touch HUD, joystick-vs-camera, Dash, creator, GLB world and save
         working-directory: candidate
         timeout-minutes: 12
         run: |
