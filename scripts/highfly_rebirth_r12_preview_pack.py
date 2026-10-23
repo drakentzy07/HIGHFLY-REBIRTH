@@ -114,7 +114,9 @@ elif mode=="dist":
     app=(dist/"index.html").read_text()
     assert lab+"assets/" in app,"R12_PREVIEW_BAD_JS_BASE"
     assert not (dist/"media").exists(),"R12_PREVIEW_MEDIA_DUPLICATED"
-    assert base+"media/" in "".join(p.read_text(errors="ignore") for p in dist.glob("assets/*.js")),"R12_PREVIEW_ROOT_MEDIA_ALIAS_MISSING"
+    bundles="".join(p.read_text(errors="ignore") for p in dist.glob("assets/*.js"))
+    if "/HIGHFLY-REBIRTH" not in bundles:
+        raise RuntimeError("R12_PREVIEW_SHARED_ROOT_MEDIA_ROUTER_MISSING")
     assert save_lab in "".join(p.read_text(errors="ignore") for p in dist.glob("assets/*.js")),"R12_PREVIEW_SAVE_NOT_ISOLATED"
     print("R12_FURY_LAB_BUILD_ISOLATED",files)
 elif mode=="assemble":
@@ -151,7 +153,25 @@ elif mode=="browser":
     for src,dst in replacements.items():
         assert old.count(src)==1,("R12_LAB_BROWSER_ANCHOR_MISMATCH",src,old.count(src))
         old=old.replace(src,dst)
+    # The lab deliberately shares the untouched R11 GLBs, KTX2s and textures.
+    # Its local test server must therefore serve /HIGHFLY-REBIRTH/media/ out
+    # of site/media; otherwise a successful browser boot would be impossible.
+    original=""" const scoped=raw===PREFIX||raw.startsWith(PREFIX+'/');"""
+    replacement=""" const shared=raw.startsWith('/HIGHFLY-REBIRTH/media/');
+ const scoped=raw===PREFIX||raw.startsWith(PREFIX+'/')||shared;"""
+    assert old.count(original)==1,("R12_TEST_SERVER_SHARED_MEDIA_SCOPE_DRIFT",old.count(original))
+    old=old.replace(original,replacement)
+    original=""" const resolved=resolve(ROOT,sub);
+ if(resolved!==ROOT&&!resolved.startsWith(ROOT+sep)){"""
+    replacement=""" const sharedRoot=resolve(ROOT,'..','..','site','media');
+ const resolved=shared
+   ?resolve(sharedRoot,raw.slice('/HIGHFLY-REBIRTH/media/'.length))
+   :resolve(ROOT,sub);
+ const boundary=shared?sharedRoot:ROOT;
+ if(resolved!==boundary&&!resolved.startsWith(boundary+sep)){"""
+    assert old.count(original)==1,("R12_TEST_SERVER_SHARED_MEDIA_PATH_DRIFT",old.count(original))
+    old=old.replace(original,replacement)
     script.write_text(old)
-    print("R12_LAB_BROWSER_TEST_BASE_AND_SAVE_SCOPE_READY")
+    print("R12_LAB_BROWSER_TEST_BASE_AND_SHARED_MEDIA_SAVE_SCOPE_READY")
 else:
     raise SystemExit("expected source|dist|assemble|browser")
