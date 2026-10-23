@@ -71,6 +71,36 @@ elif mode=="dist":
     for p in dist.rglob("*"):
         if p.is_file() and p.suffix.lower() in extensions:
             files+=int(rewrite(p))
+
+    # Static HTML/CSS url() and src/href do not pass through the native
+    # JS fetch/XHR/media resolver. R11 fixed those links in r9_audit.py.
+    # Convert each logical asset to the exact same R11 SHA-hashed file,
+    # BEFORE removing the duplicate lab media files.
+    source=(candidate/"src/render/assets/manifest.generated.ts").read_text()
+    match=re.search(r'export const MEDIA_ASSETS: Record<string, string> =\s*(\{.*?\})\s*as const',source,re.S)
+    if not match:raise RuntimeError("R12_MEDIA_MANIFEST_FORMAT_DRIFT")
+    catalogue=json.loads(match.group(1))
+    if len(catalogue)<1800:raise RuntimeError("R12_MEDIA_MANIFEST_TOO_SMALL "+str(len(catalogue)))
+    direct=re.compile(r'(?P<root>/HIGHFLY-REBIRTH/fury-lab/|/HIGHFLY-REBIRTH/|/)(?P<logical>(?:models|textures|env|vfx)/[A-Za-z0-9_./-]+)')
+    resolved_count=0
+    unresolved=[]
+    for p in dist.rglob("*"):
+        if not p.is_file() or p.suffix.lower() not in (".html",".css",".svg",".xml"):
+            continue
+        text=p.read_text(errors="replace")
+        def replace_direct(m):
+            logical=m.group("logical")
+            hashed=catalogue.get(logical)
+            if hashed:
+                return base+hashed.lstrip("/")
+            unresolved.append(str(p.relative_to(dist))+":"+logical)
+            return m.group(0)
+        updated=direct.sub(replace_direct,text)
+        if updated!=text:
+            p.write_text(updated)
+            resolved_count+=1
+    if unresolved:raise RuntimeError("R12_DIRECT_MEDIA_UNRESOLVED "+repr(unresolved[:18]))
+    print("R12_FURY_LAB_DIRECT_MEDIA_MAPPED_TO_SHARED_R11",resolved_count, len(catalogue))
     manifest=dist/"manifest.webmanifest"
     data=json.loads(manifest.read_text())
     data.update({"id":lab,"scope":lab,"start_url":lab+"?hfRebirth=1&hfFury=1&lang=es",
