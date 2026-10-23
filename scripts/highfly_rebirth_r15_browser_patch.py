@@ -8,7 +8,7 @@ def once(label,anchor,update):
  if s.count(anchor)!=1:raise AssertionError("R15_TEST_ANCHOR_"+label+"="+str(s.count(anchor)))
  s=s.replace(anchor,update,1)
 once('preview',
- "  if(!glbs.length)throw Error('R9_PREVIEW_CANVAS_WITHOUT_LOADED_GLB');",
+ " if(!glbs.length)throw Error('R9_PREVIEW_CANVAS_WITHOUT_LOADED_GLB');",
  """  if(!glbs.length)throw Error('R9_PREVIEW_CANVAS_WITHOUT_LOADED_GLB');
   const r15Preview=await page.evaluate(()=>
     window.__hfR15PreviewDiagnostics?.()??null);
