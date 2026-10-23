@@ -381,6 +381,7 @@ jobs:
           name: highfly-r16-s23-creator-hud-visual-evidence
           path: candidate/.run-diagnostics/
           if-no-files-found: ignore
+          include-hidden-files: true
           retention-days: 7
       - name: R14 complete integral native freedom regression (no publish)
         run: |
