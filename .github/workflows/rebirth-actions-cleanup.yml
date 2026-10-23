@@ -1,0 +1,73 @@
+# Removes ONLY six inventoried, already-deployed Pages package artifacts.
+# Never deletes workflows, runs, branches, commits, website content, game data or saves.
+name: HIGHFLY REBIRTH — Reclaim deployed Pages artifact storage
+on:
+  push:
+    branches: [highfly-rebirth-r12-fury360-staging-20261023]
+    paths:
+      - ".github/workflows/rebirth-actions-cleanup.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: highfly-rebirth-storage-cleanup
+  cancel-in-progress: false
+jobs:
+  clean_deployed_artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Delete only audited completed Pages archives, never code or runs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner,repo} = context.repo;
+            if (owner !== 'drakentzy07' || repo !== 'HIGHFLY-REBIRTH' ||
+                context.ref !== 'refs/heads/highfly-rebirth-r12-fury360-staging-20261023') {
+              throw new Error('REF_OR_REPOSITORY_NOT_ALLOWED');
+            }
+            // Each tuple was inventoried from the real GitHub Actions API.
+            // All deploy jobs completed successfully and have been published.
+            const targets = [
+              {artifact:12476396016,run:39894056986}, // published R11+R12 FURY LAB
+              {artifact:12467746387,run:39874197461}, // previous R11
+              {artifact:12462022792,run:39861496084},
+              {artifact:12461817025,run:39861288106},
+              {artifact:12460071306,run:39856877376},
+              {artifact:12458741283,run:39853114634}
+            ];
+            let deleted=0,bytes=0,missing=0;
+            for(const target of targets){
+              let art;
+              try{
+                art=(await github.rest.actions.getArtifact({
+                  owner,repo,artifact_id:target.artifact
+                })).data;
+              }catch(e){
+                if(e.status===404){missing++;core.info('Already expired '+target.artifact);continue;}
+                throw e;
+              }
+              if(art.name!=='github-pages' ||
+                 art.workflow_run?.id!==target.run ||
+                 art.expired) {
+                throw new Error('ARTIFACT_IDENTITY_OR_STATUS_MISMATCH '+target.artifact);
+              }
+              const run=(await github.rest.actions.getWorkflowRun({
+                owner,repo,run_id:target.run
+              })).data;
+              if(run.status!=='completed'||run.conclusion!=='success'){
+                throw new Error('NOT_A_SUCCESSFUL_FINISHED_DEPLOYMENT '+target.run);
+              }
+              core.info('Delete completed deploy artifact '+target.artifact+
+                        ', '+(art.size_in_bytes/1048576).toFixed(1)+' MiB');
+              await github.rest.actions.deleteArtifact({owner,repo,artifact_id:target.artifact});
+              deleted++;bytes+=art.size_in_bytes;
+            }
+            core.summary.addHeading('HIGHFLY REBIRTH artifact cleanup')
+              .addRaw('Deleted: '+deleted+' known Pages archives; already expired: '+missing+
+                      '; reclaimed now: '+(bytes/1073741824).toFixed(2)+' GiB.\n\n')
+              .addRaw('Preserved: website, sources, original HIGHFLY, branches, runs, logs, characters.\n\n')
+              .addRaw('GitHub billing accrued GB-hours is not refunded; billing UI may lag.')
+              .write();
+            core.info('CLEANUP_COMPLETE deleted='+deleted+' reclaimedGiB='+(bytes/1073741824).toFixed(2));
