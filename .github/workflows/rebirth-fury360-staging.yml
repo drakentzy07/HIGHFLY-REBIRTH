@@ -8,6 +8,7 @@ on:
       - ".github/workflows/rebirth-fury360-staging.yml"
       - "scripts/highfly_rebirth_r12_hud.py"
       - "scripts/highfly_rebirth_r12_aoe.py"
+      - "scripts/highfly_rebirth_r12_camera.py"
       - "scripts/highfly_rebirth_r9_browser.mjs"
       - "scripts/highfly_rebirth_r12_smoke.mjs"
       - "scripts/highfly_rebirth_r9_audit.py"
@@ -218,6 +219,8 @@ jobs:
         run: |
           set -euo pipefail
           python3 release/scripts/highfly_rebirth_r12_aoe.py candidate
+      - name: R12 GOLDEN independent mobile camera versus left joystick
+        run: python3 release/scripts/highfly_rebirth_r12_camera.py candidate
       - name: R12 typecheck staged FURY and native REBIRTH with no replacements
         working-directory: candidate
         run: pnpm exec tsc --noEmit --incremental false
