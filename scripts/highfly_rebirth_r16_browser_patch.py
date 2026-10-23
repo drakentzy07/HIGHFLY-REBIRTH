@@ -76,5 +76,36 @@ diagnosed=""" try {
    throw jumpError;
  }"""
 s=s.replace(jumpwait,diagnosed,1)
+# R16 native direct-Sim targetless basic attack safety gate.
+# Run at the END, after original save/movement/Menu proof.
+whiff_anchor=" if(failures.length)throw Error('R9_WORLD_ASSET_ERRORS '"
+assert s.count(whiff_anchor)==1,"R16_WHIFf_TEST_INSERT_DRIFT"
+whiff_test=r"""
+ await page.waitForFunction(()=>!!window.__game?.sim?.player &&
+   window.__game.sim.player.swingTimer<=0,null,{timeout:12000,polling:100});
+ const r16Whiff=await page.evaluate(()=>{
+   const sim=window.__game.sim,p=sim.player;
+   const hpBefore=Array.from(sim.entities.values())
+     .filter(e=>e.kind==='mob').map(e=>[e.id,e.hp]);
+   const manaBefore=p.highflyVitals?.mana??null;
+   const energyBefore=p.highflyVitals?.energy??null;
+   const nativeBefore=p.resource;
+   const accepted=sim.highflyManualAttack(null);
+   const timer=p.swingTimer,autoAttack=p.autoAttack;
+   const repeated=sim.highflyManualAttack(null);
+   const hpAfter=Array.from(sim.entities.values())
+     .filter(e=>e.kind==='mob').map(e=>[e.id,e.hp]);
+   return {accepted,repeated,timer,autoAttack,
+     hpUnchanged:JSON.stringify(hpBefore)===JSON.stringify(hpAfter),
+     resourcesUnchanged:nativeBefore===p.resource &&
+       manaBefore===(p.highflyVitals?.mana??null) &&
+       energyBefore===(p.highflyVitals?.energy??null)};
+ });
+ console.log('R16_NATIVE_TARGETLESS_MANUAL_WHIFf '+JSON.stringify(r16Whiff));
+ if(!r16Whiff.accepted||r16Whiff.repeated||r16Whiff.autoAttack||
+   r16Whiff.timer<=0||!r16Whiff.hpUnchanged||!r16Whiff.resourcesUnchanged)
+   throw Error('R16_INVALID_NATIVE_TARGETLESS_MANUAL_ATTACK '+JSON.stringify(r16Whiff));
+"""
+s=s.replace(whiff_anchor,whiff_test+"\n"+whiff_anchor,1)
 p.write_text(s,encoding="utf-8")
 print("R16_S23_ORIGINAL_MORE_AND_SINGLE_FRAME_BROWSER_ASSERTIONS_INSTALLED")
