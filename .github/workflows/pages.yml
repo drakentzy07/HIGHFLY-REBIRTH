@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: drakentzy07/cobalt-hollow-lab
-          ref: f8a878c81b20c3ff0d54f18a0a77e3490a36f2d1
+          ref: 9a43081c87c8d61df0299d6e8f780c7df8563ff6
           path: rebirth
           filter: blob:none
           persist-credentials: false
@@ -110,9 +110,10 @@ jobs:
           cp rebirth/rebirth-044/r1/training_entry.ts candidate/src/highfly/rebirth/training_entry.ts
           cp rebirth/rebirth-044/r1/training_style.css candidate/src/highfly/rebirth/training_style.css
           cp rebirth/rebirth-044/r2/r2_style.css candidate/src/highfly/rebirth/r2_style.css
-          for part in r1 r2 r3 r4 r6; do
+          for part in r1 r2 r3 r4 r6 r12; do
             (cd candidate && node "../rebirth/rebirth-044/$part/apply_candidate.mjs")
           done
+          (cd candidate && node ../rebirth/rebirth-044/r12/verify_candidate.mjs)
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
